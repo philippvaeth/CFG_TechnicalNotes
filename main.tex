@@ -1,0 +1,107 @@
+\documentclass{article}
+\usepackage[english]{babel}
+\usepackage[
+  style=chicago-authordate,
+  backend=biber,
+  maxcitenames=2,
+  maxbibnames=99,
+  uniquename=false,
+  uniquelist=false
+]{biblatex}
+
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+
+\addbibresource{bibliography.bib} % biblatex uses .bib explicitly
+
+\begin{document}
+
+\section{Original CFG Paper}
+\fullcite{cfg}
+\paragraph{Summary} 
+\begin{itemize}
+\item CFG extends vanilla classifier guidance to trade off mode coverage and sample fidelity in conditional diffusion model sampling in analogy to low temperature sampling or truncation in other types of generative models.
+\item CFG may be better than vanilla classifier guidance could be seen as an adversarial attack on classifiers, which could boost classifier-based metrics like FID and IS
+\item Implementing truncation or low temperature sampling in diffusion models are ineffective. Scaling model scores or decreasing the variance of Gaussian noise of the reverse process generates blurry, low quality samples (diffusion models beat GANs paper).
+\item Vanilla CG adapts the learned score $\boldsymbol{\epsilon}_\theta\left(\mathbf{z}_\lambda, \mathbf{c}\right) \approx-\sigma_\lambda \nabla_{\mathbf{z}_\lambda} \log p\left(\mathbf{z}_\lambda \mid \mathbf{c}\right)$ to include the gradient of the log likelihood of an auxiliary classifier model $p_\theta\left(\mathbf{c} \mid \mathbf{z}_\lambda\right)$ as follows:
+$$
+\tilde{\boldsymbol{\epsilon}}_\theta\left(\mathbf{z}_\lambda, \mathbf{c}\right)=\boldsymbol{\epsilon}_\theta\left(\mathbf{z}_\lambda, \mathbf{c}\right)-w \sigma_\lambda \nabla_{\mathbf{z}_\lambda} \log p_\theta\left(\mathbf{c} \mid \mathbf{z}_\lambda\right) \approx-\sigma_\lambda \nabla_{\mathbf{z}_\lambda}\left[\log p\left(\mathbf{z}_\lambda \mid \mathbf{c}\right)+w \log p_\theta\left(\mathbf{c} \mid \mathbf{z}_\lambda\right)\right]
+$$
+This results in approximate samples from the distribution:
+$$
+\tilde{p}_\theta\left(\mathbf{z}_\lambda \mid \mathbf{c}\right) \propto p_\theta\left(\mathbf{z}_\lambda \mid \mathbf{c}\right) p_\theta\left(\mathbf{c} \mid \mathbf{z}_\lambda\right)^w
+$$
+Results on a toy 2D dataset with 3 classes for which the conditional distribution for each class is an isotropic Gaussian show that the contional upon applying guidance is non-Gaussian. 
+As guidance strength is increased, each conditional places probability mass farther away from other classes and towards directions of high confidence given by logistic regression, and most of the mass becomes concentrated in smaller regions. 
+\item CFG aims to achive the same modification of the conditional score but without a classifier. It is done by training a conditional and unconditional model with one neural network and trade off both scores during sampling 
+$$
+\tilde{\boldsymbol{\epsilon}}_\theta\left(\mathbf{z}_\lambda, \mathbf{c}\right)=(1+w) \boldsymbol{\epsilon}_\theta\left(\mathbf{z}_\lambda, \mathbf{c}\right)-w \boldsymbol{\epsilon}_\theta\left(\mathbf{z}_\lambda\right)
+$$
+Only a relatively small portion of the model capacity of the diffusion model needs to be dedicated to the unconditional generation task in order to produce classifier-free guided scores effective for sample quality.
+\end{itemize}
+
+\paragraph{Questions}
+\begin{itemize}
+    \item Trade-off between diversity and sample quality (truncation in GAN, temperature sampling in flows, cfg in diffusion). Intuition why these two things are opposing?
+    \item In the 2D toy example, why is the distribution changed in such a way?
+    \item "Furthermore, $\tilde{\boldsymbol{\epsilon}}_\theta$ is constructed from score estimates that are non-conservative vector fields due to the use of unconstrained neural networks, so there in general cannot exist a scalar potential such as a classifier log likelihood for which $\tilde{\boldsymbol{\epsilon}}_\theta$ is the classifier-guided score." What does that mean?
+    \item So basically CFG is trained to mostly be a conditional model and then the conditional score is again heavily amplified during sampling?
+\end{itemize}
+
+\section{Boosting Diffusion Models with an Adaptive Momentum Sampler}
+\fullcite{wang2024boosting}
+
+\paragraph{Summary}
+\begin{itemize}
+    \item Standard Diffusion model sampling is independent of previous time steps, which can lead to excessive noise and missing high-level components in the generated images.
+    \item By using an ADAM-like sampler and employing a larger momentum that heavily re-uses the update direction of early steps leads to augmented details while still preserving high-level information. This phenomenon aligns with the two stages of learning for likelihood-based models (Rombach et al. 2022), where the first stage focuses on learning high-frequency details, while the second stage focuses on learning conceptual compositions.
+\end{itemize}
+
+\paragraph{Questions}
+\begin{itemize}
+    \item "IS (...) is often referred to as a method to measure inter-class diversity and is less sensitive to the diversity of the images inside one label (Lucic et al. 2018; Borji 2019). In contrast, FID can detect intra-class mode collapsing as well (Lucic et al. 2018)."
+    Does that mean that the blind spot of both metrics are non diverse intra-class samples which are however not a mode collapse? Is that even desired?
+    \item The authors show a rate (bits/dim) vs distortion (RMSE) curve. What does that mean?
+\end{itemize}
+
+\section{Classifier-Free Guidance is a Predictor-Corrector}
+\fullcite{bradley2024classifier}
+
+\paragraph{Summary}
+\begin{itemize}
+    \item CFG interacts differently with DDIM and DDPM, and neither sampler with CFG generates the gamma powered distribution $p(x \mid c)^\gamma p(x)^{1-\gamma}$
+    \item CFG can be interpreted as a predictor-corrector methods that alternates between denoising and sharpening
+    \item In the SDE limit, CFG is equivalent to combining a DDIM predictor for the conditional distribution with a Langevin dynamics corrector for the gamma-powered distribution $p_t(x)^{1-\gamma^{\prime}} p_t(x \mid c)^{\gamma^{\prime}}$, with $\gamma^{\prime}=(2 \gamma-1)$
+    \item Understanding CFG ($p^*$ as the ideal CFG sampler, $\hat{p}$ as the real CFG sampler) - Why CFG improves both image quality and promt adherence compared to conditional sampling?: 
+    $$
+    \underbrace{\text { PerceivedQuality }\left[\widehat{p}_\gamma\right]}_{\text {Real CFG }}=\underbrace{\text { PerceivedQuality }\left[p_\gamma^*\right]}_{\text {Ideal CFG }}-\underbrace{\left(\text { PerceivedQuality }\left[p_\gamma^*\right]-\text { PerceivedQuality }\left[\widehat{p}_\gamma\right]\right)}_{\text {Generalization Gap }}
+    $$
+    Which means at least one of the following occurs:
+    \begin{itemize}
+        \item The ideal CFG sampler improves in quality with increasing $\gamma$. That is, CFG distorts the population distribution in a favorable way (e.g. by sharpening it, or otherwise).
+        \item The generalization gap decreases with increasing $\gamma$. That is, CFG has a type of regularization effect, bringing population and empirical processes closer.
+    \end{itemize}
+    It is likely that both occurs: most models are trained on poor-quality datasets (cluttered images from the web) and we want the model to sample from a higher-quality distribution (images of an isolated subject).
+    On the other hand, CFG seems to produce less outliers.
+    \item It is open to find explicit characterizations of CFGs output distribution, in terms of the original $p(x)$ and $p(x|c)$ — although it is possible tractable expressions do not exist.
+
+\end{itemize}
+
+\paragraph{Questions}
+\begin{itemize}
+    \item "We cannot mathematically specify this notion of quality, but we will assume it exists for analysis. Notably, PerceivedQuality is not a measurement of how close a distribution is to the ground-truth p(x|c) — it is possible for a generated distribution to appear even “higher quality” than the ground-truth, for example." How? 
+    \item For the case of the reduced generalization gap, is that somehow related to the gap in the ELBO?
+\end{itemize}
+
+\section{What does guidance do? A fine-grained analysis in a simple setting}
+\fullcite{chidambaram2024what}
+\paragraph{Summary}
+\begin{itemize}
+    \item The paper analyzes two cases: (1) mixtures of compactly supported distributions and (2) mixtures of Gaussians, which reflect salient properties of guidance that manifest on real-world data.
+    \item As the guidance parameter increases, the guided model samples more heavily from the boundary of the support of the conditional distribution
+    \item For any nonzero level of score estimation error, sufficiently large guidance will result in sampling away from the support, theoretically justifying the empirical finding that large guidance results in distorted generations.
+\end{itemize}
+
+\printbibliography
+
+\end{document}
