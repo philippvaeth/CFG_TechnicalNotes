@@ -98,10 +98,55 @@ Only a relatively small portion of the model capacity of the diffusion model nee
 \paragraph{Summary}
 \begin{itemize}
     \item The paper analyzes two cases: (1) mixtures of compactly supported distributions and (2) mixtures of Gaussians, which reflect salient properties of guidance that manifest on real-world data.
-    \item As the guidance parameter increases, the guided model samples more heavily from the boundary of the support of the conditional distribution
+    \item As the guidance parameter increases, the guided model samples more heavily from the boundary of the support of the conditional distribution. The guided ODE first swings past the edges of the support of $p$ and into the tails of the noised data distribution $p_t$ before returning. As a result, errors in score estimation at these tails can move the sampling process away from the intended trajectory and thus prevent the trajectory from ever returning to the support of $p$, leading to corrupted outputs.
     \item For any nonzero level of score estimation error, sufficiently large guidance will result in sampling away from the support, theoretically justifying the empirical finding that large guidance results in distorted generations.
 \end{itemize}
 
-\printbibliography
+\section{Guiding a Diffusion Model with a Bad Version of Itself}
+\fullcite{karras2024guiding}
 
+\paragraph{Summary}
+\begin{itemize}
+    \item CFG uses an unconditional model to guide a conditional model, leading to simultaneously better prompt alignment and higher-quality images at the cost of reduced variation. Interestingly, it is possible to obtain disentangled control over image quality without compromising the amount of variation by guiding generation using a smaller, less-trained version of the model itself rather than an unconditional model.
+    \item CFG forces the model to generate samples away from other classes, which can mean dropping density areas close to another class. CFG also avoids low-probability intermediate regions which can mean gaps in the density where CFG wont sample from. The authors say this may stem from a worse fit of the data distribution for the unconditional model due to the fact that it is much more difficult to generate out of the entire distribution, paired with the fact that the unconditional model usually gets a small part of the training budget. This could mean CFG is not only boosting the likelihood of the sample having come from the target class, but also that of having come from the higher-quality implied distribution.
+    \item Autoguidance uses this intuition to guide a high-quality model with a poor quality model, usually with low capacity or under-trained. This is because under limited model capacity, score matching tends to over-emphasize low-probability (i.e., implausible and under-trained) regions of the data distribution. The authors expect the weaker version of the same model to make broadly similar errors in the same regions, only stronger. Measuring the difference between both scores indicates the general direction towards better samples if the models disagree. The authors recommend an early snapshot of a smaller model as the guidance model. Many other degradation models to yield a guidance model are not performing well.
+\end{itemize}
+
+\paragraph{Questions}
+\begin{itemize}
+    \item "The training objective of a diffusion model aims to cover the entire (conditional) data distribution. This causes problems in low-probability regions: The model gets heavily penalized for not representing them, but it does not have enough data to learn to generate good images corresponding to them. CFG has become the standard method for “lowering the sampling temperature”, i.e., focusing the generation on well-learned high-probability regions. By training a denoiser network to operate in both conditional and unconditional setting, the sampling process can be steered away from the unconditional result — in effect, the unconditional generation task specifies a result to avoid.". Should the training objective then not be fixed to ignore low probability regions from the start?
+\end{itemize}
+ 
+
+\section{Applying Guidance in a Limited Interval Improves Sample and Distribution Quality in Diffusion Models}
+\fullcite{kynkaanniemi2024applying}
+
+\paragraph{Summary}
+\begin{itemize}
+    \item The authors show that guidance is clearly harmful toward the beginning of the backward process (high noise levels) leading towards a handful template images per prompt greatly reducing variation, largely unnecessary toward the end (low noise levels), and only beneficial in the middle as it causes samples with more decisive set of features with crisper and perceptually more pleasing results. 
+    \item Limiting the guidance interval allows the use of much higher guidance weight.
+    \item The proposed guidance interval is based on a piecewise-linear function, which sets w to 1 outside the guidance interval, removing the influence of the unconditional model. Smoother weighing functions did not improve results. Disabling guidance at selected sampling steps also did not work, guidance seems to have a cumulative effect over multiple consecutive steps.
+\end{itemize}
+
+\paragraph{Questions}
+\begin{itemize}
+    \item The authors claim to estimate the optimal guidance interval in practice, the lower limit should be set to zero first to optimize the upper limit, then fix the upper limit and optimize the lower limit. However, they wrote in the introduction that limiting the guidance interval allows for a higher guidance weight. So it seems counterintuitive that one can have a constant weight but with difference sized intervals.
+\end{itemize}
+
+% \section{}
+% \fullcite{}
+
+% \paragraph{Summary}
+% \begin{itemize}
+%     \item 
+% \end{itemize}
+
+% \paragraph{Questions}
+% \begin{itemize}
+%     \item 
+% \end{itemize}
+
+
+\printbibliography
+ 
 \end{document}
