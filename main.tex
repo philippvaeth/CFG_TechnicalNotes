@@ -133,6 +133,91 @@ Only a relatively small portion of the model capacity of the diffusion model nee
     \item The authors claim to estimate the optimal guidance interval in practice, the lower limit should be set to zero first to optimize the upper limit, then fix the upper limit and optimize the lower limit. However, they wrote in the introduction that limiting the guidance interval allows for a higher guidance weight. So it seems counterintuitive that one can have a constant weight but with difference sized intervals.
 \end{itemize}
 
+\section{Understanding Generalizability of Diffusion Models Requires Rethinking the Hidden Gaussian Structure}
+\fullcite{li2024understanding}
+
+\paragraph{Summary}
+\begin{itemize}
+    \item In previous work, it was shown that diffusion models exhibit good generalization capacity. During training, recent research demonstrates that diffusion models operate in two distinct regimes: (i) a memorization regime, where models primarily reproduce training samples and (ii) a generalization regime, where models generate high-quality, novel images that extend beyond the training data. In the generalization regime, a particularly intriguing phenomenon is that diffusion models trained on non-overlapping datasets can generate nearly identical samples.
+    \item The authors show that diffusion models have an inductive bias towards capturing and utilizing the Gaussian structure (covariance information) of the training set. This inductive bias seems unique to diffusion models and becomes more apparent when the model's capacity is relatively small compared to the training data set size. In the overparameterized regime, this inductive bias emerges during initial training phases before the model fully memorizes the training data.
+    \item The recently observed strong generalization results from diffusion models learning certain common low-dimensional structural features shared across non-overlapping datasets can be partially explained through the Gaussian structure.
+    \item The observed Gaussian structure is the optimal solution to the denoising score matching objective under the constraint that the model is linear. 
+    \item Empirically by distilling models from a non-linear model, in the high-noise regime of training, only coarse image structures are generated. The linear, Gaussian, multi-delta and non-linear model counterparts behave very similar. In the low-noise regime, only subtle, imperceptible details are added to the generated images. Both linear and multivariate Gaussian models effectively approximate the non-linear model. Even the nonlinear model exhibits high linearity shown by approximating an identity function with 1 on the skip connections and 0 for the network weights. In the intermediate-noise regime, realistic image content is generated with significant nonlinearity. 
+    \item A linear diffusion model can still generate images that resemble those generated with a nonlinear model in terms of overall image structure and some details.
+    \item Modeling $p_{\text{data}}(x)$ as a multi-delta distribution reveals a key insight: while unconstrained optimal denoisers perfectly capture the scores of the empirical distribution, they have no generalizability. In contrast, Gaussian denoisers, despite having higher score approximation errors due to the linear constraint, can generate novel images that closely match those produced by the actual diffusion models. This suggests that the generative power of diffusion models stems from the imperfect learning of the score functions of the empirical distribution.
+    \item Although real-world image distributions are significantly different from Gaussian, the findings imply that diffusion models have the bias towards learning and utilizing low-dimensional data structures, such as the data covariance, for image generation. However, the underlying mechanism by which the nonlinear diffusion models, trained with gradient descent, exhibit such linearity remains unclear and warrants further investigation.
+    \item The authors define a generalization score to measure how well a diffusion model generalizes beyond the training data set:
+    $$
+    \text { GL Score }:=\frac{1}{k} \sum_{i=1}^k \frac{\left\|\boldsymbol{x}_i-\mathrm{NN}_Y\left(\boldsymbol{x}_i\right)\right\|_2}{\left\|\boldsymbol{x}_i\right\|_2}
+    $$
+\end{itemize}
+
+\paragraph{Questions}
+\begin{itemize}
+    \item If it is true that during high-noise and low-noise regimes of diffusion sampling, the model shows high linearity, what does that mean for CFG? How does it behave differently? Is it connected to the CFG in the limited interval where CFG is only applied on the non-linear parts of sampling?
+    \item What would happen if we were to apply the GL score to CFG? It should behave proportional to the guidance scale.
+\end{itemize}
+
+\section{Boosting Diffusion Models with Moving Average Sampling in Frequency Domain}
+\fullcite{qian2024boosting}
+
+\paragraph{Summary}
+\begin{itemize}
+    \item The authors propose to use moving averages over the $x_0$-prediction to stabilize sampling. For DDIM, this is straightforward plug-and-play. For other samplers, the $x_0$-prediction can be calculated by the noise prediction and then plugged in for sampling.
+    \item Through the intuition that the diffusion model first generates low-frequency signals and then gradually adds high-frequency details, they employ a Discrete Wavelet Transform (DTW) to decompose the $x_0$-prediction into four wavelet subbands and separately apply moving averages with different parameters on each band. At each time step, the bands are converted back to the image domain via Inverse DWT.
+\end{itemize}
+
+\paragraph{Questions}
+\begin{itemize}
+    \item The method is only evaluated on FID, the diversity is not measured so the results are difficult to interpret.
+\end{itemize}
+
+\section{Characteristic Guidance: Non-linear Correction for Diffusion Model at Large Guidance Scale}
+\fullcite{zheng2023characteristic}
+
+\paragraph{Summary}
+\begin{itemize}
+    \item The original CFG formulation relies on the mixing of scores for the conditional and unconditional model, but the authors say this only holds for $t=0$. The authors propose a mixing error, which measures the deviation of the guidance method from the Fokker-Planck equation (the learned score function is a solution of the score FP equation, the deviation from this leads to errors in sampling due to removing the equivalence between forward and backward diffusion process). For CFG, the mixing error comes from the non-linear terms of the FP equation, where the amplitude escalates with an increase in guidance scale and intensifies as the variance decreases.
+    \item The paper proposes characteristic guidance as a systematic solution to the large guidance scale issue by addressing the nonlinearity neglicted in classifier-free guidance. Characteristic guidance employs a correction term with a projection operation. This projection differences between pixel space diffusion, latent space diffusion and low dimensional cases.
+    \item The non-linear corrections predominantly occur in the middle stages of the diffusion process.
+\end{itemize}
+
+\paragraph{Questions}
+\begin{itemize}
+    \item The authors claim that CFG suffers from severe bias and catastrophic loss of diversity when ODE based sampling methods (ODE, DDIM, and DPM++2M) are used. Why is that the case?
+    \item The characteristic guidances effect on latent space diffusion models (LDM) (Rombach et al., 2021) is different: it enhances the control strength rather than lowering the FID. It may simply be the choice of projection but its not clear why. 
+\end{itemize}
+
+\section{REG: Rectified Gradient Guidance for Conditional Diffusion Models}
+\fullcite{gao2025reg}
+
+\paragraph{Summary}
+\begin{itemize}
+    \item The authors claim that the currently employed CFG is only an approximating to the correct time-aware CFG, which would in practice prohibitively require sampling $x_0$ for each $x_t$.
+    \item The paper proposes a rectified guidance term. Despite lower error and better FID/IS pareto fronts, it requires computation of an additional Jacobian matrix compared to vanilla CFG.
+\end{itemize}
+
+\section{Eliminating Oversaturation and Artifacts of High Guidance Scales in Diffusion Models}
+\fullcite{sadat2024eliminating}
+
+\paragraph{Summary}
+\begin{itemize}
+    \item 
+\end{itemize}
+
+\paragraph{Questions}
+\begin{itemize}
+    \item 
+\end{itemize}
+
+
+% \section{}
+% \fullcite{}
+% \paragraph{Questions}
+% \begin{itemize}
+%     \item 
+% \end{itemize}
+
 % \section{}
 % \fullcite{}
 
@@ -146,6 +231,38 @@ Only a relatively small portion of the model capacity of the diffusion model nee
 %     \item 
 % \end{itemize}
 
+
+
+\section{Overall Summary and Questions}
+\begin{itemize}
+    \item CFG is a technique to mix scores of a conditional and unconditional model to balance mode coverage and sample fidelity. This combined model is strangely better than a conditional or an unconditional model. In practice, the conditional model gets the majority of the compute budget and its score is most influential during sampling (high weight).
+    \item CFG was originally intended to construct a new noise network to sample from a scaled distribution instead. This has been shown to not be the case for simpler tasks such as Gaussian mixtures. The intermediate distributions and the final distributions are very difficult to characterize outside specifically constructed cases (multi-delta, Gaussian, linear model).
+    \item CFG provides a way to trade-off mode coverage (prompt alignment, diversity) with sample fidelity, although empirically it has been shown that very high prompt alignment and very high sample fidelity can be achieved while maintaining high generalization capability and only sacrificing some diversity in generations. Why and how this happens is still unclear.
+    \item One intuition why CFG works so well could be that we can not train but we can sample from a higher quality underlying data distribution. Natural images contain for example many objects and are often cluttered, whereas there is a subset of clean images with a single object which is perceived as higher quality. It is however questionable how to measure the higher perceived quality (FID compares to samples from the distribution).
+    \item Since people are maximizing the FID and IS scores as this is measurable, are there optimal mixtures of the conditional / unconditional scores such that each metric is optimized?
+    \item CG takes an unconditional model and includes a gradient ascent step towards a classifier. CFG largely takes a conditional model and removes "unconditional likelihood". Could we go back and do the same for CG, so train a conditional model and then during sampling increase diversity through increasing classifier entropy?
+\end{itemize}
+
+\section{TODOs}
+\begin{itemize}
+    \item \fullcite{NEURIPS2023_d0da30e3}
+    \item \fullcite{wang2024the}
+    \item \fullcite{10.5555/3692070.3694254}
+    \item \fullcite{de2025distributional}
+    \item \fullcite{wang2024analysis}
+    \item \fullcite{Bansal_2023_CVPR}
+    \item \fullcite{pavasovic2025classifierfreeguidancehighdimensionalanalysis}
+    \item \fullcite{sadat2024no}
+    \item \fullcite{shao2025images}
+    \item \fullcite{skreta2025feynman}
+    \item \fullcite{skreta2024superposition}
+    \item \fullcite{sun2025unified}
+    \item \fullcite{sun2025noise}
+    \item \fullcite{tang2025diffusion}
+    \item \fullcite{yang2025efficient}
+    \item \fullcite{zhao2025studying}
+    \item \fullcite{sadat2024cads}
+\end{itemize}
 
 \printbibliography
  
