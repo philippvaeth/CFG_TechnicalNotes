@@ -202,7 +202,9 @@ Only a relatively small portion of the model capacity of the diffusion model nee
 
 \paragraph{Summary}
 \begin{itemize}
-    \item 
+    \item The authors disentangle the CFG update term into parallel and orthogonal components and show that the parallel component primarily causes oversaturation, while the orthogonal component enhances image quality.
+    \item Rescaling and momentum is added to the CFG updates by the gradient ascent analogy. The rescaling is to control large update norms, which can cause drifts in the sampling process, they propose to constrain the updates within a sphere. The momentum is used in a repulsive way to down-weigh components arelady present in previous sampling steps, they call it reverse momentum.
+    \item Adaptive projected guidance (APG) retains the quality-boosting advantages of CFG while preventing oversaturation at higher guidance scales.
 \end{itemize}
 
 \paragraph{Questions}
@@ -246,24 +248,29 @@ Only a relatively small portion of the model capacity of the diffusion model nee
 \section{TODOs}
 \begin{itemize}
     \item \fullcite{NEURIPS2023_d0da30e3}
-    \item \fullcite{wang2024the}
-    \item \fullcite{10.5555/3692070.3694254}
-    \item \fullcite{de2025distributional}
-    \item \fullcite{wang2024analysis}
     \item \fullcite{Bansal_2023_CVPR}
-    \item \fullcite{pavasovic2025classifierfreeguidancehighdimensionalanalysis}
+    \item \fullcite{10.5555/3692070.3694254}
+    \item \fullcite{wang2024analysis}
+    \item \fullcite{wang2024the}
+    \item \fullcite{sadat2024cads}
+    \item \fullcite{shen2024understanding}
+    \item \fullcite{chen2024towards}
+    \item \fullcite{skreta2024superposition}
     \item \fullcite{sadat2024no}
+    \item \fullcite{chen2025s2guidancestochasticselfguidance}
+    \item \fullcite{pavasovic2025classifierfreeguidancehighdimensionalanalysis}
     \item \fullcite{shao2025images}
     \item \fullcite{skreta2025feynman}
-    \item \fullcite{skreta2024superposition}
     \item \fullcite{sun2025unified}
+    \item \fullcite{de2025distributional}
     \item \fullcite{sun2025noise}
     \item \fullcite{tang2025diffusion}
     \item \fullcite{yang2025efficient}
     \item \fullcite{zhao2025studying}
-    \item \fullcite{sadat2024cads}
+    \item \fullcite{karczewski2025devil}
+    \item \fullcite{shah2025does}
 \end{itemize}
 
-\printbibliography
+% \printbibliography
  
 \end{document}
