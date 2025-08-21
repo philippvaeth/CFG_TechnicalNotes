@@ -48,6 +48,21 @@ Only a relatively small portion of the model capacity of the diffusion model nee
     \item So basically CFG is trained to mostly be a conditional model and then the conditional score is again heavily amplified during sampling?
 \end{itemize}
 
+\section{Characteristic Guidance: Non-linear Correction for Diffusion Model at Large Guidance Scale}
+\fullcite{zheng2023characteristic}
+
+\paragraph{Summary}
+\begin{itemize}
+    \item The original CFG formulation relies on the mixing of scores for the conditional and unconditional model, but the authors say this only holds for $t=0$. The authors propose a mixing error, which measures the deviation of the guidance method from the Fokker-Planck equation (the learned score function is a solution of the score FP equation, the deviation from this leads to errors in sampling due to removing the equivalence between forward and backward diffusion process). For CFG, the mixing error comes from the non-linear terms of the FP equation, where the amplitude escalates with an increase in guidance scale and intensifies as the variance decreases.
+    \item The paper proposes characteristic guidance as a systematic solution to the large guidance scale issue by addressing the nonlinearity neglicted in classifier-free guidance. Characteristic guidance employs a correction term with a projection operation. This projection differences between pixel space diffusion, latent space diffusion and low dimensional cases.
+    \item The non-linear corrections predominantly occur in the middle stages of the diffusion process.
+\end{itemize}
+
+\paragraph{Questions}
+\begin{itemize}
+    \item The authors claim that CFG suffers from severe bias and catastrophic loss of diversity when ODE based sampling methods (ODE, DDIM, and DPM++2M) are used. Why is that the case?
+    \item The characteristic guidances effect on latent space diffusion models (LDM) (Rombach et al., 2021) is different: it enhances the control strength rather than lowering the FID. It may simply be the choice of projection but its not clear why. 
+\end{itemize}
 \section{Boosting Diffusion Models with an Adaptive Momentum Sampler}
 \fullcite{wang2024boosting}
 
@@ -172,21 +187,7 @@ Only a relatively small portion of the model capacity of the diffusion model nee
     \item The method is only evaluated on FID, the diversity is not measured so the results are difficult to interpret.
 \end{itemize}
 
-\section{Characteristic Guidance: Non-linear Correction for Diffusion Model at Large Guidance Scale}
-\fullcite{zheng2023characteristic}
 
-\paragraph{Summary}
-\begin{itemize}
-    \item The original CFG formulation relies on the mixing of scores for the conditional and unconditional model, but the authors say this only holds for $t=0$. The authors propose a mixing error, which measures the deviation of the guidance method from the Fokker-Planck equation (the learned score function is a solution of the score FP equation, the deviation from this leads to errors in sampling due to removing the equivalence between forward and backward diffusion process). For CFG, the mixing error comes from the non-linear terms of the FP equation, where the amplitude escalates with an increase in guidance scale and intensifies as the variance decreases.
-    \item The paper proposes characteristic guidance as a systematic solution to the large guidance scale issue by addressing the nonlinearity neglicted in classifier-free guidance. Characteristic guidance employs a correction term with a projection operation. This projection differences between pixel space diffusion, latent space diffusion and low dimensional cases.
-    \item The non-linear corrections predominantly occur in the middle stages of the diffusion process.
-\end{itemize}
-
-\paragraph{Questions}
-\begin{itemize}
-    \item The authors claim that CFG suffers from severe bias and catastrophic loss of diversity when ODE based sampling methods (ODE, DDIM, and DPM++2M) are used. Why is that the case?
-    \item The characteristic guidances effect on latent space diffusion models (LDM) (Rombach et al., 2021) is different: it enhances the control strength rather than lowering the FID. It may simply be the choice of projection but its not clear why. 
-\end{itemize}
 
 \section{REG: Rectified Gradient Guidance for Conditional Diffusion Models}
 \fullcite{gao2025reg}
