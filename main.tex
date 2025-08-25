@@ -11,7 +11,7 @@
 
 \usepackage{amsmath,amssymb}
 \usepackage{graphicx}
-
+\usepackage{algorithm,algpseudocode}
 \addbibresource{bibliography.bib} % biblatex uses .bib explicitly
 
 \begin{document}
@@ -20,32 +20,55 @@
 \fullcite{cfg}
 \paragraph{Summary} 
 \begin{itemize}
-\item CFG extends vanilla classifier guidance to trade off mode coverage and sample fidelity in conditional diffusion model sampling in analogy to low temperature sampling or truncation in other types of generative models.
-\item CFG may be better than vanilla classifier guidance could be seen as an adversarial attack on classifiers, which could boost classifier-based metrics like FID and IS
-\item Implementing truncation or low temperature sampling in diffusion models are ineffective. Scaling model scores or decreasing the variance of Gaussian noise of the reverse process generates blurry, low quality samples (diffusion models beat GANs paper).
-\item Vanilla CG adapts the learned score $\boldsymbol{\epsilon}_\theta\left(\mathbf{z}_\lambda, \mathbf{c}\right) \approx-\sigma_\lambda \nabla_{\mathbf{z}_\lambda} \log p\left(\mathbf{z}_\lambda \mid \mathbf{c}\right)$ to include the gradient of the log likelihood of an auxiliary classifier model $p_\theta\left(\mathbf{c} \mid \mathbf{z}_\lambda\right)$ as follows:
-$$
-\tilde{\boldsymbol{\epsilon}}_\theta\left(\mathbf{z}_\lambda, \mathbf{c}\right)=\boldsymbol{\epsilon}_\theta\left(\mathbf{z}_\lambda, \mathbf{c}\right)-w \sigma_\lambda \nabla_{\mathbf{z}_\lambda} \log p_\theta\left(\mathbf{c} \mid \mathbf{z}_\lambda\right) \approx-\sigma_\lambda \nabla_{\mathbf{z}_\lambda}\left[\log p\left(\mathbf{z}_\lambda \mid \mathbf{c}\right)+w \log p_\theta\left(\mathbf{c} \mid \mathbf{z}_\lambda\right)\right]
-$$
+\item Implementing truncation or low temperature sampling in diffusion models is ineffective. Scaling model scores or decreasing the variance of Gaussian noise of the reverse process generates blurry, low quality samples (diffusion models beat GANs paper). It is therefore not trivial how to influence the sampling process of a diffusion model.
+\item Vanilla CG is a way to trade off IS and FID by "up-weighting the probability of data for which the classifier assigns high likelihood to the correct label". CG adapts the learned score $\boldsymbol{\epsilon}_\theta\left(\mathbf{z}_\lambda, \mathbf{c}\right) \approx-\sigma_\lambda \nabla_{\mathbf{z}_\lambda} \log p\left(\mathbf{z}_\lambda \mid \mathbf{c}\right)$ to include the gradient of the log likelihood of an auxiliary classifier model $p_\theta\left(\mathbf{c} \mid \mathbf{z}_\lambda\right)$ as follows:
+\begin{align*}
+\tilde{\boldsymbol{\epsilon}}_\theta\left(\mathbf{z}_\lambda, \mathbf{c}\right)&=\boldsymbol{\epsilon}_\theta\left(\mathbf{z}_\lambda, \mathbf{c}\right)-w \sigma_\lambda \nabla_{\mathbf{z}_\lambda} \log p_\theta\left(\mathbf{c} \mid \mathbf{z}_\lambda\right)\\ &\approx-\sigma_\lambda \nabla_{\mathbf{z}_\lambda}\left[\log p\left(\mathbf{z}_\lambda \mid \mathbf{c}\right)+w \log p_\theta\left(\mathbf{c} \mid \mathbf{z}_\lambda\right)\right]
+\end{align*}
 This results in approximate samples from the distribution:
 $$
 \tilde{p}_\theta\left(\mathbf{z}_\lambda \mid \mathbf{c}\right) \propto p_\theta\left(\mathbf{z}_\lambda \mid \mathbf{c}\right) p_\theta\left(\mathbf{c} \mid \mathbf{z}_\lambda\right)^w
 $$
-Results on a toy 2D dataset with 3 classes for which the conditional distribution for each class is an isotropic Gaussian show that the contional upon applying guidance is non-Gaussian. 
-As guidance strength is increased, each conditional places probability mass farther away from other classes and towards directions of high confidence given by logistic regression, and most of the mass becomes concentrated in smaller regions. 
-\item CFG aims to achive the same modification of the conditional score but without a classifier. It is done by training a conditional and unconditional model with one neural network and trade off both scores during sampling 
+Results on a toy 2D dataset with 3 classes for which the conditional distribution for each class is an isotropic Gaussian show that the conditional upon applying guidance is non-Gaussian. 
+As guidance strength increases, each conditional places probability mass farther away from other classes and towards directions of high confidence given by logistic regression, and most of the mass becomes concentrated in smaller regions. 
+\item CFG aims to achieve the same modification of the conditional score but without a classifier. It is done by training a conditional and unconditional model with one neural network and trade off both scores during sampling 
 $$
 \tilde{\boldsymbol{\epsilon}}_\theta\left(\mathbf{z}_\lambda, \mathbf{c}\right)=(1+w) \boldsymbol{\epsilon}_\theta\left(\mathbf{z}_\lambda, \mathbf{c}\right)-w \boldsymbol{\epsilon}_\theta\left(\mathbf{z}_\lambda\right)
 $$
 Only a relatively small portion of the model capacity of the diffusion model needs to be dedicated to the unconditional generation task in order to produce classifier-free guided scores effective for sample quality.
+\item CFG extends vanilla classifier guidance to trade off mode coverage and sample fidelity in conditional diffusion model sampling in analogy to low temperature sampling or truncation in other types of generative models.
+\item CFG may be better than vanilla classifier guidance could be seen as an adversarial attack on classifiers, which could boost classifier-based metrics like FID and IS
 \end{itemize}
+
+\begin{algorithm}
+\caption{Conditional sampling with classifier-free guidance}%\label{alg:cap}
+\begin{algorithmic}
+\Require $w$ guidance strength
+\Require $c$ conditioning information for conditional sampling 
+\Require $\lambda_1, \ldots, \lambda_T \text { : increasing } \log \text { SNR sequence with } \lambda_1=\lambda_{\min }, \lambda_T=\lambda_{\max }$
+
+\State $\mathbf{z}_1 \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$
+\For{$t = 1, \dots, T$}
+\State $\tilde{\boldsymbol{\epsilon}}_t=(1+w) \boldsymbol{\epsilon}_\theta\left(\mathbf{z}_t, \mathbf{c}\right)-w \boldsymbol{\epsilon}_\theta\left(\mathbf{z}_t\right)$
+\Comment{CFG score at log SNR $\lambda_t$}
+\State $\tilde{\mathbf{x}}_t=\left(\mathbf{z}_t-\sigma_{\lambda_t} \tilde{\boldsymbol{\epsilon}}_t\right) / \alpha_{\lambda_t}$ \Comment{Denoising step based on sampler}
+\If{$t<T$}
+\State $\mathbf{z}_{t+1} \sim \mathcal{N}\left(\tilde{\boldsymbol{\mu}}_{\lambda_{t+1} \mid \lambda_t}\left(\mathbf{z}_t, \tilde{\mathbf{x}}_t\right),\left(\tilde{\sigma}_{\lambda_{t+1} \mid \lambda_t}^2\right)^{1-v}\left(\sigma_{\lambda_t \mid \lambda_{t+1}}^2\right)^v\right)$
+\Else
+\State $\mathbf{z}_{t+1}=\tilde{\mathbf{x}}_t$
+\EndIf
+\EndFor
+\end{algorithmic}
+\end{algorithm}
 
 \paragraph{Questions}
 \begin{itemize}
     \item Trade-off between diversity and sample quality (truncation in GAN, temperature sampling in flows, cfg in diffusion). Intuition why these two things are opposing?
-    \item In the 2D toy example, why is the distribution changed in such a way?
+    \item People usually discuss diversity and sample quality because it can be measured by IS and FID, but what about the success of the conditioning (prompt alignment). Is that always given or are there also degrees to it? It should not be the same to barely cross the class boundary compared to sample in the mode of the target class?
+    \item In the 2D toy example, why is the distribution changed in such a way? First, why is mass shifted away from other classes even though the gradient is not explicitly calculated for it (or is that because of the low dimensionality)? Second, why is the mass concentrated (in a bit more complicated class, there should be multiple high-likelihood regions)?
     \item "Furthermore, $\tilde{\boldsymbol{\epsilon}}_\theta$ is constructed from score estimates that are non-conservative vector fields due to the use of unconstrained neural networks, so there in general cannot exist a scalar potential such as a classifier log likelihood for which $\tilde{\boldsymbol{\epsilon}}_\theta$ is the classifier-guided score." What does that mean?
-    \item So basically CFG is trained to mostly be a conditional model and then the conditional score is again heavily amplified during sampling?
+    \item CFG is trained to mostly be a conditional model and then the conditional score is again heavily amplified during sampling. How is that different to a conditional model (with regularization)?
+    \item Both CG and CFG obtain their best results when applying guidance to an already class-conditional model, as opposed to applying guidance to an unconditional model. In theory, they are proportional as $p_\theta\left(\mathbf{z}_\lambda \mid \mathbf{c}\right) p_\theta\left(\mathbf{c} \mid \mathbf{z}_\lambda\right)^w \propto p_\theta\left(\mathbf{z}_\lambda\right) p_\theta\left(\mathbf{c} \mid \mathbf{z}_\lambda\right)^{w+1}$. Is guidance on the conditional model simply better because it is easier to regularize the class-conditional model?
 \end{itemize}
 
 \section{Characteristic Guidance: Non-linear Correction for Diffusion Model at Large Guidance Scale}
@@ -54,8 +77,11 @@ Only a relatively small portion of the model capacity of the diffusion model nee
 \paragraph{Summary}
 \begin{itemize}
     \item The original CFG formulation relies on the mixing of scores for the conditional and unconditional model, but the authors say this only holds for $t=0$. The authors propose a mixing error, which measures the deviation of the guidance method from the Fokker-Planck equation (the learned score function is a solution of the score FP equation, the deviation from this leads to errors in sampling due to removing the equivalence between forward and backward diffusion process). For CFG, the mixing error comes from the non-linear terms of the FP equation, where the amplitude escalates with an increase in guidance scale and intensifies as the variance decreases.
-    \item The paper proposes characteristic guidance as a systematic solution to the large guidance scale issue by addressing the nonlinearity neglicted in classifier-free guidance. Characteristic guidance employs a correction term with a projection operation. This projection differences between pixel space diffusion, latent space diffusion and low dimensional cases.
-    \item The non-linear corrections predominantly occur in the middle stages of the diffusion process.
+    \item Characteristic guidance is proposed as:
+    $$\boldsymbol{\epsilon}_{C H}\left(\mathbf{x} \mid \mathbf{c}, t_i, \omega\right)=(1+\omega) \boldsymbol{\epsilon}_\theta\left(\mathbf{x}_1 \mid \mathbf{c}, t_i\right)-\omega \boldsymbol{\epsilon}_\theta\left(\mathbf{x}_2, t_i\right)\enspace,$$ 
+    with $\mathbf{x}_1=\mathbf{x}+\omega \Delta \mathbf{x}, \mathbf{x}_2=\mathbf{x}+(1+\omega) \Delta \mathbf{x}$ and $\Delta \mathbf{x}$ a training-free non-linear correction term based on a projection operation. This projection is different for pixel space diffusion, latent space diffusion and low dimensional cases.
+    \item The paper proposes characteristic guidance as a systematic solution to the large guidance scale issue by addressing the nonlinearity neglected in classifier-free guidance.  
+    \item The non-linear correction predominantly occurs in the middle stages of the diffusion process.
 \end{itemize}
 
 \paragraph{Questions}
@@ -203,9 +229,12 @@ Only a relatively small portion of the model capacity of the diffusion model nee
 
 \paragraph{Summary}
 \begin{itemize}
-    \item The authors disentangle the CFG update term into parallel and orthogonal components and show that the parallel component primarily causes oversaturation, while the orthogonal component enhances image quality.
-    \item Rescaling and momentum is added to the CFG updates by the gradient ascent analogy. The rescaling is to control large update norms, which can cause drifts in the sampling process, they propose to constrain the updates within a sphere. The momentum is used in a repulsive way to down-weigh components arelady present in previous sampling steps, they call it reverse momentum.
-    \item Adaptive projected guidance (APG) retains the quality-boosting advantages of CFG while preventing oversaturation at higher guidance scales.
+    \item The authors disentangle the CFG update term into parallel and orthogonal components and show that the parallel component primarily causes oversaturation, while the orthogonal component enhances image quality. The parallel component can be seen as a simple "gain", pushing the values towards extremes of their range. 
+    \item Rescaling and momentum is added to the CFG updates by the gradient ascent analogy. The CFG update rule can be interpreted as stochastic gradient ascent on the $\ell_2$ distance between the conditional and unconditional prediction with a learning rate of $w-1$.
+    \item If the delta between the conditional and unconditional predictions is too large, the update can cause drifts in the sampling process. They propose to constrain the updates within a sphere so that the delta stays closer to the conditional prediction. 
+    \item The momentum (average pixel values of previous updates) is used in a repulsive way to down-weigh components already present in previous sampling steps. They call it reverse momentum. 
+    \item Adaptive projected guidance (APG) retains the quality-boosting advantages of CFG while preventing oversaturation at higher guidance scales. The authors claim APG also increases diversity. APG notably works over the denoised predictions instead of the noise predictions, even though they can be computed interchangeably.
+    \item 
 \end{itemize}
 
 \paragraph{Questions}
