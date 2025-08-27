@@ -13,12 +13,14 @@
 \usepackage{graphicx}
 \usepackage{algorithm,algpseudocode}
 \addbibresource{bibliography.bib} % biblatex uses .bib explicitly
+\usepackage[dvipsnames]{xcolor}
 
 \begin{document}
+\textcolor{ForestGreen}{Discussed on 25 Aug 2025} 
 
-\section{Original CFG Paper}
+\section{\color{ForestGreen} Original CFG Paper}
 \fullcite{cfg}
-\paragraph{Summary} 
+ 
 \begin{itemize}
 \item Implementing truncation or low temperature sampling in diffusion models is ineffective. Scaling model scores or decreasing the variance of Gaussian noise of the reverse process generates blurry, low quality samples (diffusion models beat GANs paper). It is therefore not trivial how to influence the sampling process of a diffusion model.
 \item Vanilla CG is a way to trade off IS and FID by "up-weighting the probability of data for which the classifier assigns high likelihood to the correct label". CG adapts the learned score $\boldsymbol{\epsilon}_\theta\left(\mathbf{z}_\lambda, \mathbf{c}\right) \approx-\sigma_\lambda \nabla_{\mathbf{z}_\lambda} \log p\left(\mathbf{z}_\lambda \mid \mathbf{c}\right)$ to include the gradient of the log likelihood of an auxiliary classifier model $p_\theta\left(\mathbf{c} \mid \mathbf{z}_\lambda\right)$ as follows:
@@ -71,10 +73,10 @@ Only a relatively small portion of the model capacity of the diffusion model nee
     \item Both CG and CFG obtain their best results when applying guidance to an already class-conditional model, as opposed to applying guidance to an unconditional model. In theory, they are proportional as $p_\theta\left(\mathbf{z}_\lambda \mid \mathbf{c}\right) p_\theta\left(\mathbf{c} \mid \mathbf{z}_\lambda\right)^w \propto p_\theta\left(\mathbf{z}_\lambda\right) p_\theta\left(\mathbf{c} \mid \mathbf{z}_\lambda\right)^{w+1}$. Is guidance on the conditional model simply better because it is easier to regularize the class-conditional model?
 \end{itemize}
 
-\section{Characteristic Guidance: Non-linear Correction for Diffusion Model at Large Guidance Scale}
+\section{\color{ForestGreen} Characteristic Guidance: Non-linear Correction for Diffusion Model at Large Guidance Scale}
 \fullcite{zheng2023characteristic}
 
-\paragraph{Summary}
+
 \begin{itemize}
     \item The original CFG formulation relies on the mixing of scores for the conditional and unconditional model, but the authors say this only holds for $t=0$. The authors propose a mixing error, which measures the deviation of the guidance method from the Fokker-Planck equation (the learned score function is a solution of the score FP equation, the deviation from this leads to errors in sampling due to removing the equivalence between forward and backward diffusion process). For CFG, the mixing error comes from the non-linear terms of the FP equation, where the amplitude escalates with an increase in guidance scale and intensifies as the variance decreases.
     \item Characteristic guidance is proposed as:
@@ -89,10 +91,28 @@ Only a relatively small portion of the model capacity of the diffusion model nee
     \item The authors claim that CFG suffers from severe bias and catastrophic loss of diversity when ODE based sampling methods (ODE, DDIM, and DPM++2M) are used. Why is that the case?
     \item The characteristic guidances effect on latent space diffusion models (LDM) (Rombach et al., 2021) is different: it enhances the control strength rather than lowering the FID. It may simply be the choice of projection but its not clear why. 
 \end{itemize}
-\section{Boosting Diffusion Models with an Adaptive Momentum Sampler}
+\section{(skip) Spontaneous Symmetry Breaking in Generative Diffusion Models}
+\fullcite{NEURIPS2023_d0da30e3}
+
+\begin{itemize}
+\item The paper proposes that the generative process in diffusion models consists of two phases 1) A linear steady-state dynamics around a central fixed-point and 2) an attractor dynamics directed towards the data manifold. These two “phases” are separated by the change in stability of the central fixed-point, with the resulting window of instability being responsible for the diversity of the generated samples.
+\item The theory is empirically shown on some data sets, but leveraging symmetries in practice is very difficult due to the high dimensionality
+\end{itemize}
+
+\section{(skip) Universal Guidance for Diffusion Models}
+\fullcite{Bansal_2023_CVPR}
+
+\begin{itemize}
+    \item Universal Guidance is a heuristic improvement over the vanilla classifier guidance based on three steps: forward universal guidance, backward universal guidance and per-step self-recurrence
+    \item Forward universal guidance is applying a one-step denoising estimate, which is then used to guide the unconditional noise prediction for the noisy latent
+    \item Backward universal guidance optimizes over the one-step estimate (in data space) for maximum conditioning alignment, then adapts the noise prediction for the noisy latent by the delta in the data space
+    \item Per-step self-recurrence moves one step towards noise (against the sampling direction) and repeats all three steps k times
+\end{itemize}
+
+\section{\color{ForestGreen} Boosting Diffusion Models with an Adaptive Momentum Sampler}
 \fullcite{wang2024boosting}
 
-\paragraph{Summary}
+
 \begin{itemize}
     \item Standard Diffusion model sampling is independent of previous time steps, which can lead to excessive noise and missing high-level components in the generated images.
     \item By using an ADAM-like sampler and employing a larger momentum that heavily re-uses the update direction of early steps leads to augmented details while still preserving high-level information. This phenomenon aligns with the two stages of learning for likelihood-based models (Rombach et al. 2022), where the first stage focuses on learning high-frequency details, while the second stage focuses on learning conceptual compositions.
@@ -105,10 +125,16 @@ Only a relatively small portion of the model capacity of the diffusion model nee
     \item The authors show a rate (bits/dim) vs distortion (RMSE) curve. What does that mean?
 \end{itemize}
 
-\section{Classifier-Free Guidance is a Predictor-Corrector}
+\section{Theoretical insights for diffusion guidance: a case study for Gaussian mixture models}
+\fullcite{10.5555/3692070.3694254}
+\begin{itemize}
+    \item 
+\end{itemize}
+
+\section{\color{ForestGreen} Classifier-Free Guidance is a Predictor-Corrector}
 \fullcite{bradley2024classifier}
 
-\paragraph{Summary}
+
 \begin{itemize}
     \item CFG interacts differently with DDIM and DDPM, and neither sampler with CFG generates the gamma powered distribution $p(x \mid c)^\gamma p(x)^{1-\gamma}$
     \item CFG can be interpreted as a predictor-corrector methods that alternates between denoising and sharpening
@@ -136,7 +162,7 @@ Only a relatively small portion of the model capacity of the diffusion model nee
 
 \section{What does guidance do? A fine-grained analysis in a simple setting}
 \fullcite{chidambaram2024what}
-\paragraph{Summary}
+
 \begin{itemize}
     \item The paper analyzes two cases: (1) mixtures of compactly supported distributions and (2) mixtures of Gaussians, which reflect salient properties of guidance that manifest on real-world data.
     \item As the guidance parameter increases, the guided model samples more heavily from the boundary of the support of the conditional distribution. The guided ODE first swings past the edges of the support of $p$ and into the tails of the noised data distribution $p_t$ before returning. As a result, errors in score estimation at these tails can move the sampling process away from the intended trajectory and thus prevent the trajectory from ever returning to the support of $p$, leading to corrupted outputs.
@@ -146,7 +172,7 @@ Only a relatively small portion of the model capacity of the diffusion model nee
 \section{Guiding a Diffusion Model with a Bad Version of Itself}
 \fullcite{karras2024guiding}
 
-\paragraph{Summary}
+
 \begin{itemize}
     \item CFG uses an unconditional model to guide a conditional model, leading to simultaneously better prompt alignment and higher-quality images at the cost of reduced variation. Interestingly, it is possible to obtain disentangled control over image quality without compromising the amount of variation by guiding generation using a smaller, less-trained version of the model itself rather than an unconditional model.
     \item CFG forces the model to generate samples away from other classes, which can mean dropping density areas close to another class. CFG also avoids low-probability intermediate regions which can mean gaps in the density where CFG wont sample from. The authors say this may stem from a worse fit of the data distribution for the unconditional model due to the fact that it is much more difficult to generate out of the entire distribution, paired with the fact that the unconditional model usually gets a small part of the training budget. This could mean CFG is not only boosting the likelihood of the sample having come from the target class, but also that of having come from the higher-quality implied distribution.
@@ -162,7 +188,7 @@ Only a relatively small portion of the model capacity of the diffusion model nee
 \section{Applying Guidance in a Limited Interval Improves Sample and Distribution Quality in Diffusion Models}
 \fullcite{kynkaanniemi2024applying}
 
-\paragraph{Summary}
+
 \begin{itemize}
     \item The authors show that guidance is clearly harmful toward the beginning of the backward process (high noise levels) leading towards a handful template images per prompt greatly reducing variation, largely unnecessary toward the end (low noise levels), and only beneficial in the middle as it causes samples with more decisive set of features with crisper and perceptually more pleasing results. 
     \item Limiting the guidance interval allows the use of much higher guidance weight.
@@ -177,7 +203,7 @@ Only a relatively small portion of the model capacity of the diffusion model nee
 \section{Understanding Generalizability of Diffusion Models Requires Rethinking the Hidden Gaussian Structure}
 \fullcite{li2024understanding}
 
-\paragraph{Summary}
+
 \begin{itemize}
     \item In previous work, it was shown that diffusion models exhibit good generalization capacity. During training, recent research demonstrates that diffusion models operate in two distinct regimes: (i) a memorization regime, where models primarily reproduce training samples and (ii) a generalization regime, where models generate high-quality, novel images that extend beyond the training data. In the generalization regime, a particularly intriguing phenomenon is that diffusion models trained on non-overlapping datasets can generate nearly identical samples.
     \item The authors show that diffusion models have an inductive bias towards capturing and utilizing the Gaussian structure (covariance information) of the training set. This inductive bias seems unique to diffusion models and becomes more apparent when the model's capacity is relatively small compared to the training data set size. In the overparameterized regime, this inductive bias emerges during initial training phases before the model fully memorizes the training data.
@@ -202,7 +228,7 @@ Only a relatively small portion of the model capacity of the diffusion model nee
 \section{Boosting Diffusion Models with Moving Average Sampling in Frequency Domain}
 \fullcite{qian2024boosting}
 
-\paragraph{Summary}
+
 \begin{itemize}
     \item The authors propose to use moving averages over the $x_0$-prediction to stabilize sampling. For DDIM, this is straightforward plug-and-play. For other samplers, the $x_0$-prediction can be calculated by the noise prediction and then plugged in for sampling.
     \item Through the intuition that the diffusion model first generates low-frequency signals and then gradually adds high-frequency details, they employ a Discrete Wavelet Transform (DTW) to decompose the $x_0$-prediction into four wavelet subbands and separately apply moving averages with different parameters on each band. At each time step, the bands are converted back to the image domain via Inverse DWT.
@@ -218,7 +244,7 @@ Only a relatively small portion of the model capacity of the diffusion model nee
 \section{REG: Rectified Gradient Guidance for Conditional Diffusion Models}
 \fullcite{gao2025reg}
 
-\paragraph{Summary}
+
 \begin{itemize}
     \item The authors claim that the currently employed CFG is only an approximating to the correct time-aware CFG, which would in practice prohibitively require sampling $x_0$ for each $x_t$.
     \item The paper proposes a rectified guidance term. Despite lower error and better FID/IS pareto fronts, it requires computation of an additional Jacobian matrix compared to vanilla CFG.
@@ -227,7 +253,7 @@ Only a relatively small portion of the model capacity of the diffusion model nee
 \section{Eliminating Oversaturation and Artifacts of High Guidance Scales in Diffusion Models}
 \fullcite{sadat2024eliminating}
 
-\paragraph{Summary}
+
 \begin{itemize}
     \item The authors disentangle the CFG update term into parallel and orthogonal components and show that the parallel component primarily causes oversaturation, while the orthogonal component enhances image quality. The parallel component can be seen as a simple "gain", pushing the values towards extremes of their range. 
     \item Rescaling and momentum is added to the CFG updates by the gradient ascent analogy. The CFG update rule can be interpreted as stochastic gradient ascent on the $\ell_2$ distance between the conditional and unconditional prediction with a learning rate of $w-1$.
@@ -253,7 +279,7 @@ Only a relatively small portion of the model capacity of the diffusion model nee
 % \section{}
 % \fullcite{}
 
-% \paragraph{Summary}
+% 
 % \begin{itemize}
 %     \item 
 % \end{itemize}
@@ -277,9 +303,6 @@ Only a relatively small portion of the model capacity of the diffusion model nee
 
 \section{TODOs}
 \begin{itemize}
-    \item \fullcite{NEURIPS2023_d0da30e3}
-    \item \fullcite{Bansal_2023_CVPR}
-    \item \fullcite{10.5555/3692070.3694254}
     \item \fullcite{wang2024analysis}
     \item \fullcite{wang2024the}
     \item \fullcite{sadat2024cads}
