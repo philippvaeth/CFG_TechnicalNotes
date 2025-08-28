@@ -125,10 +125,12 @@ Only a relatively small portion of the model capacity of the diffusion model nee
     \item The authors show a rate (bits/dim) vs distortion (RMSE) curve. What does that mean?
 \end{itemize}
 
-\section{Theoretical insights for diffusion guidance: a case study for Gaussian mixture models}
+\section{(skip) Theoretical insights for diffusion guidance: a case study for Gaussian mixture models}
 \fullcite{10.5555/3692070.3694254}
 \begin{itemize}
-    \item 
+    \item For GMMs and both DDPM and DDIM samplers with diffusion guidance, the classification confidence — which measures the posterior probability associated with the guided class given an output sample — only increases when diffusion guidance is applied. 
+    \item For GMMs, increasing the diffusion guidance always results in a reduction in the differential entropy. This offers the first theoretical explanation for the benefit of the diffusion guidance in generating more homogeneous samples. 
+    \item For GMMs with the means aligned, the role of the guidance strength can be more complicated. There seems to exist a phase transition in the behavior of the classification confidence as one increases the guidance strength. Cautions thus need to be exercised in practice in terms of selecting a proper guidance strength.
 \end{itemize}
 
 \section{\color{ForestGreen} Classifier-Free Guidance is a Predictor-Corrector}
@@ -240,6 +242,11 @@ Only a relatively small portion of the model capacity of the diffusion model nee
 \end{itemize}
 
 
+\section{Analysis of classifier-free guidance weight schedulers}
+\fullcite{wang2024analysis}
+\begin{itemize}
+    \item 
+\end{itemize}
 
 \section{REG: Rectified Gradient Guidance for Conditional Diffusion Models}
 \fullcite{gao2025reg}
@@ -291,7 +298,7 @@ Only a relatively small portion of the model capacity of the diffusion model nee
 
 
 
-\section{Overall Summary and Questions}
+\section*{Overall Summary and Questions}
 \begin{itemize}
     \item CFG is a technique to mix scores of a conditional and unconditional model to balance mode coverage and sample fidelity. This combined model is strangely better than a conditional or an unconditional model. In practice, the conditional model gets the majority of the compute budget and its score is most influential during sampling (high weight).
     \item CFG was originally intended to construct a new noise network to sample from a scaled distribution instead. This has been shown to not be the case for simpler tasks such as Gaussian mixtures. The intermediate distributions and the final distributions are very difficult to characterize outside specifically constructed cases (multi-delta, Gaussian, linear model).
@@ -301,9 +308,8 @@ Only a relatively small portion of the model capacity of the diffusion model nee
     \item CG takes an unconditional model and includes a gradient ascent step towards a classifier. CFG largely takes a conditional model and removes "unconditional likelihood". Could we go back and do the same for CG, so train a conditional model and then during sampling increase diversity through increasing classifier entropy?
 \end{itemize}
 
-\section{TODOs}
+\section*{TODOs}
 \begin{itemize}
-    \item \fullcite{wang2024analysis}
     \item \fullcite{wang2024the}
     \item \fullcite{sadat2024cads}
     \item \fullcite{shen2024understanding}
