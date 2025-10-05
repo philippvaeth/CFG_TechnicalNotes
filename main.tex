@@ -16,9 +16,9 @@
 \usepackage[dvipsnames]{xcolor}
 
 \begin{document}
+\section{Classifier(-free) Guidance}
 \textcolor{ForestGreen}{Discussed on 25 Aug 2025} 
-
-\section{\color{ForestGreen} Original CFG Paper}
+\subsection{\color{ForestGreen} Original CFG Paper}
 \fullcite{cfg}
  
 \begin{itemize}
@@ -73,7 +73,39 @@ Only a relatively small portion of the model capacity of the diffusion model nee
     \item Both CG and CFG obtain their best results when applying guidance to an already class-conditional model, as opposed to applying guidance to an unconditional model. In theory, they are proportional as $p_\theta\left(\mathbf{z}_\lambda \mid \mathbf{c}\right) p_\theta\left(\mathbf{c} \mid \mathbf{z}_\lambda\right)^w \propto p_\theta\left(\mathbf{z}_\lambda\right) p_\theta\left(\mathbf{c} \mid \mathbf{z}_\lambda\right)^{w+1}$. Is guidance on the conditional model simply better because it is easier to regularize the class-conditional model?
 \end{itemize}
 
-\section{\color{ForestGreen} Characteristic Guidance: Non-linear Correction for Diffusion Model at Large Guidance Scale}
+\subsection{(skip) Elucidating the Design Space of Diffusion-Based Generative Models}
+\fullcite{karras2022elucidating}
+\begin{itemize}
+    \item The choice of the noise schedule has major practical implications and should not be made on the basis of theoretical convenience.
+    \item Heun's 2nd order method (a.k.a. improved Euler, trapezoidal rule) — previously explored in the context of diffusion models by Jolicoeur-Martineau et al. — provides an excellent tradeoff between truncation error and NFE. It introduces an additional correction step for xi+1 to account for change  in dx/dt between ti and ti+1. This correction leads to less local error at the cost of one additional evaluation of $D_\theta(\boldsymbol{x} ; t)$ per step.
+    \item The time steps determine how the step sizes and thus ODE truncation errors are distributed between different noise levels. The step size should decrease monotonically with decreasing noise schedule, and it does not need to vary on a per-sample basis.
+    \item The shape of the ODE solution trajectories is defined by the noise schedule and noise scale functions. The choice of these functions offers a way to reduce the truncation errors, as their magnitude can be expected to scale proportional to the curvature of dx/dt. The best choice for these functions is $\sigma(t)=t$ (noise schedule) and $s(t)=1$ (noise scale), which is also the choice made in DDIM. With this choice, the ODE simplifies to $\mathrm{d} \boldsymbol{x} / \mathrm{d} t=(\boldsymbol{x}-D(\boldsymbol{x} ; t)) / t$ and $\sigma$ and $t$ become interchangeable.  An immediate consequence is that at any $x$ and $t$, a single Euler step to $t = 0 $ yields the denoised image $D_\theta(\boldsymbol{x} ; t)$. The tangent of the solution trajectory therefore always points towards the denoiser output. This can be expected to change only slowly with the noise level, which corresponds to largely linear solution trajectories.
+    \item The sampling process is orthogonal to how each model was originally trained.
+    \item The SDEs of Song et al. can be generalized as a sum of the probability flow ODE and a time-varying Langevin diffusion SDE:
+    $$
+    \mathrm{d} \boldsymbol{x}_{ \pm}=\underbrace{-\dot{\sigma}(t) \sigma(t) \nabla_{\boldsymbol{x}} \log p(\boldsymbol{x} ; \sigma(t)) \mathrm{d} t}_{\text {probability flow ODE (Eq. 1) }} \pm \underbrace{\underbrace{\beta(t) \sigma(t)^2 \nabla_{\boldsymbol{x}} \log p(\boldsymbol{x} ; \sigma(t)) \mathrm{d} t}_{\text {deterministic noise decay }}+\underbrace{\sqrt{2 \beta(t)} \sigma(t) \mathrm{d} \omega_t}_{\text {noise injection }}}_{\text {Langevin diffusion SDE }},
+    $$
+    where $\omega_t$ is the standard Wiener process. dx+ and dx- are now separate SDEs for moving forward and backward in time, related by the time reversal formula of Anderson. The Langevin term can further be seen as a combination of a deterministic score-based denoising term and a stochastic noise injection term, whose net noise level contributions cancel out. As such, $\beta(t)$ effectively expresses the relative rate at which existing noise is replaced with new noise. This perspective reveals why stochasticity is helpful in practice: The implicit Langevin diffusion drives the sample towards the desired marginal distribution at a given time, actively correcting for any errors made in earlier sampling steps. On the other hand, approximating the Langevin term with discrete SDE solver steps introduces error in itself. The optimal amount of stochasticity should be determined empirically, however excessive Langevin-like addition and removal of noise results in gradual loss of detail in the generated images with all datasets and denoiser networks. There is also a drift toward oversaturated colors at very low and high noise levels. Interestingly, the relevance of stochastic sampling appears to diminish as the model itself improves.
+\end{itemize}
+
+\subsection{(skip) Entropy-driven sampling and training scheme
+for conditional diffusion generation}
+\fullcite{zheng2022entropy}
+\begin{itemize}
+    \item Due to the gap between the discriminative task of the classifier and the generative task of the diffusion model, the classifier can easily classify the images in the middle of the sampling process. As a result, the guidance vanishes and the details are left for the diffusion model.
+    \item To avoid this, the guidance scale can be rescaled adaptively based on the entropy of the predicted classifier class distribution. The scale is calculated based on the predicted distribution entropy normalized by the maximum entropy (entropy of the uniform distribution over the classes). This has been extended to a training adaption.
+\end{itemize}
+
+\subsection{(skip) Generating high fidelity data from low-density regions using diffusion models}
+\fullcite{sehwag2022generating} 
+\begin{itemize}
+    \item Vanilla sampling from diffusion models predominantly sample from high-density regions of the data manifold.
+    \item By using the vanilla classifier guidance setup, the denoising process is steered by two additional guidance terms: 1) minimizing a contrastive loss for a Gaussian model of image embeddings and class embeddings in the embedding space of a classifier, which pushed the sample towards low density regions and 2) a binary classifier to distinguish fake and real images to generate more images on the manifold, as higher guidance scales or when scaling term 1) too much leads to off-manifold generations. 
+    \item The high likelihood of a sample could mean a sample from a higher density region, but the likelihood estimates don't seem to be a reliable predictor of manifold density by common metrics and human judgement. 
+    \item Diffusion models seem to generalize in low density regions of the data manifold instead of relying on memorization, at least on an imagenet scale.
+\end{itemize}
+
+\subsection{\color{ForestGreen} Characteristic Guidance: Non-linear Correction for Diffusion Model at Large Guidance Scale}
 \fullcite{zheng2023characteristic}
 
 
@@ -91,7 +123,7 @@ Only a relatively small portion of the model capacity of the diffusion model nee
     \item The authors claim that CFG suffers from severe bias and catastrophic loss of diversity when ODE based sampling methods (ODE, DDIM, and DPM++2M) are used. Why is that the case?
     \item The characteristic guidances effect on latent space diffusion models (LDM) (Rombach et al., 2021) is different: it enhances the control strength rather than lowering the FID. It may simply be the choice of projection but its not clear why. 
 \end{itemize}
-\section{(skip) Spontaneous Symmetry Breaking in Generative Diffusion Models}
+\subsection{(skip) Spontaneous Symmetry Breaking in Generative Diffusion Models}
 \fullcite{NEURIPS2023_d0da30e3}
 
 \begin{itemize}
@@ -99,7 +131,7 @@ Only a relatively small portion of the model capacity of the diffusion model nee
 \item The theory is empirically shown on some data sets, but leveraging symmetries in practice is very difficult due to the high dimensionality
 \end{itemize}
 
-\section{(skip) Universal Guidance for Diffusion Models}
+\subsection{(skip) Universal Guidance for Diffusion Models}
 \fullcite{Bansal_2023_CVPR}
 
 \begin{itemize}
@@ -109,7 +141,45 @@ Only a relatively small portion of the model capacity of the diffusion model nee
     \item Per-step self-recurrence moves one step towards noise (against the sampling direction) and repeats all three steps k times
 \end{itemize}
 
-\section{\color{ForestGreen} Boosting Diffusion Models with an Adaptive Momentum Sampler}
+\subsection{(skip) Rethinking conditional diffusion sampling with progressive guidance}
+\fullcite{dinh2023rethinking}
+
+\begin{itemize}
+    \item As classifier gradients wrt to one class try to push the generated sample away from other classes, common features across classes may be suppressed. This results in a limited pool of features with less diversity or the absence of robust features for image construction. 
+    \item Instead of maximizing the probability towards one class, one can guide by the weighted sum over all class gradients. The gradients are weighted by LLM-generated text descriptions and the resulting embedding similarity. The main target class is also progressively upscaled whereas the influence of the other classes is downscaled accordingly throughout the sampling process.
+\end{itemize}
+
+\subsection{(skip) Freedom: Training-free energy-guided conditional diffusion model}
+\fullcite{yu2023freedom}
+\begin{itemize}
+    \item Guidance should be training-free, meaning no extra robust classifier training (CG) and no conditional score estimation (CFG)
+    \item Model the conditional alignment distribution as:
+    $$
+    p\left(\mathbf{c} \mid \mathbf{x}_t\right)=\frac{\exp \left\{-\lambda \mathcal{E}\left(\mathbf{c}, \mathbf{x}_t\right)\right\}}{Z}\enspace,
+    $$
+    s.t. $
+    \nabla_{\mathbf{x}_t} \log p\left(\mathbf{c} \mid \mathbf{x}_t\right) \propto-\nabla_{\mathbf{x}_t} \mathcal{E}\left(\mathbf{c}, \mathbf{x}_t\right)
+    $
+    \item In practice, the energy is a distance function for an arbitrary conditioning and a one step denoising estimate is used to apply the conditioning. 
+    \item As suggested in previous work, guidance is most impactful in the middle of the sampling process, where semantics are introduced. The authors propose to apply the energy guidance in that interval and further amplify the guidance by "time-travel", which noises $x_t$ multiple time steps and guides back to $t$, effectively shifting more compute and conditioning in the middle of the sampling process.
+\end{itemize}
+
+\subsection{(skip) Loss-Guided Diffusion Models for Plug-and-Play Controllable Generation}
+\fullcite{pmlr-v202-song23k} 
+% $$
+% \nabla_{\mathbf{x}_t} \log p_t^{(\ell)}\left(\mathbf{y} \mid \mathbf{x}_t\right)=\nabla_{\mathbf{x}_t} \log \left(p_t^{(\ell)}\left(\mathbf{x}_t \mid \mathbf{y}\right) / p_t^{(\ell)}\left(\mathbf{x}_t\right)\right)
+% $$
+Use classifier guidance, but estimate $p_t(y\mid x_t)$ as:
+$$
+p_t^{(\ell)}\left(\mathbf{y} \mid \mathbf{x}_t\right)=\int_{\mathbf{x}_0} p\left(\mathbf{x}_0 \mid \mathbf{x}_t\right) p_0^{(\ell)}\left(\mathbf{y} \mid \mathbf{x}_0\right) \mathrm{d} \mathbf{x}_0
+$$
+$p\left(\mathbf{x}_0 \mid \mathbf{x}_t\right)$ requires multiple model evaluations, so it is approximated as:
+$$
+\mathbf{M C}_n\left(\mathbf{x}_t, \mathbf{y}\right)=\nabla_{\mathbf{x}_t} \log \left(\frac{1}{n} \sum_{i=1}^n \exp \left(-\ell_{\mathbf{y}}\left(\mathbf{x}^{(i)}\right)\right)\right)\enspace,
+$$
+evaluated $n=3$ times during sampling, where $\mathbf{x}^{(i)} \sim q\left(\mathbf{x}_0 \mid \mathbf{x}_t\right)$ are i.i.d. samples from an approximate inference distribution $q\left(\mathbf{x}_0 \mid \mathbf{x}_t\right)$. In practice, it's a Gaussian centered around the minimum mean squared error (MMSE) estimator of $x_0$ given $x_t$ and $\sigma_t$  (basically optimal $x_o$ prediction).
+
+\subsection{\color{ForestGreen} Boosting Diffusion Models with an Adaptive Momentum Sampler}
 \fullcite{wang2024boosting}
 
 
@@ -125,7 +195,7 @@ Only a relatively small portion of the model capacity of the diffusion model nee
     \item The authors show a rate (bits/dim) vs distortion (RMSE) curve. What does that mean?
 \end{itemize}
 
-\section{(skip) Theoretical insights for diffusion guidance: a case study for Gaussian mixture models}
+\subsection{(skip) Theoretical insights for diffusion guidance: a case study for Gaussian mixture models}
 \fullcite{10.5555/3692070.3694254}
 \begin{itemize}
     \item For GMMs and both DDPM and DDIM samplers with diffusion guidance, the classification confidence — which measures the posterior probability associated with the guided class given an output sample — only increases when diffusion guidance is applied. 
@@ -133,7 +203,7 @@ Only a relatively small portion of the model capacity of the diffusion model nee
     \item For GMMs with the means aligned, the role of the guidance strength can be more complicated. There seems to exist a phase transition in the behavior of the classification confidence as one increases the guidance strength. Cautions thus need to be exercised in practice in terms of selecting a proper guidance strength.
 \end{itemize}
 
-\section{\color{ForestGreen} Classifier-Free Guidance is a Predictor-Corrector}
+\subsection{\color{ForestGreen} Classifier-Free Guidance is a Predictor-Corrector}
 \fullcite{bradley2024classifier}
 
 
@@ -162,7 +232,7 @@ Only a relatively small portion of the model capacity of the diffusion model nee
     \item For the case of the reduced generalization gap, is that somehow related to the gap in the ELBO?
 \end{itemize}
 
-\section{What does guidance do? A fine-grained analysis in a simple setting}
+\subsection{(skip) What does guidance do? A fine-grained analysis in a simple setting}
 \fullcite{chidambaram2024what}
 
 \begin{itemize}
@@ -171,7 +241,7 @@ Only a relatively small portion of the model capacity of the diffusion model nee
     \item For any nonzero level of score estimation error, sufficiently large guidance will result in sampling away from the support, theoretically justifying the empirical finding that large guidance results in distorted generations.
 \end{itemize}
 
-\section{Guiding a Diffusion Model with a Bad Version of Itself}
+\subsection{Guiding a Diffusion Model with a Bad Version of Itself}
 \fullcite{karras2024guiding}
 
 
@@ -187,7 +257,7 @@ Only a relatively small portion of the model capacity of the diffusion model nee
 \end{itemize}
  
 
-\section{Applying Guidance in a Limited Interval Improves Sample and Distribution Quality in Diffusion Models}
+\subsection{Applying Guidance in a Limited Interval Improves Sample and Distribution Quality in Diffusion Models}
 \fullcite{kynkaanniemi2024applying}
 
 
@@ -202,7 +272,7 @@ Only a relatively small portion of the model capacity of the diffusion model nee
     \item The authors claim to estimate the optimal guidance interval in practice, the lower limit should be set to zero first to optimize the upper limit, then fix the upper limit and optimize the lower limit. However, they wrote in the introduction that limiting the guidance interval allows for a higher guidance weight. So it seems counterintuitive that one can have a constant weight but with difference sized intervals.
 \end{itemize}
 
-\section{Understanding Generalizability of Diffusion Models Requires Rethinking the Hidden Gaussian Structure}
+\subsection{Understanding Generalizability of Diffusion Models Requires Rethinking the Hidden Gaussian Structure}
 \fullcite{li2024understanding}
 
 
@@ -227,28 +297,50 @@ Only a relatively small portion of the model capacity of the diffusion model nee
     \item What would happen if we were to apply the GL score to CFG? It should behave proportional to the guidance scale.
 \end{itemize}
 
-\section{Boosting Diffusion Models with Moving Average Sampling in Frequency Domain}
+\subsection{(skip) Understanding and improving training-free loss-based diffusion guidance}
+\fullcite{shen2024understanding}
+Approximating $\nabla_{\boldsymbol{x}_t} \log p_t\left(\boldsymbol{y} \mid \boldsymbol{x}_t\right)$ for guidance in high-dimensional spaces requires solving an intractable integral or training a robust classifier. If a classifier is useful for guidance, it should be robust (aka low Lipschitz constant) to avoid adversarial guidance gradients. By employing (in practice 10) random augmentations to the one step denoised estimate improves classifier robustness. Using a Polyak step size (normalized gradient to balance the magnitude of the guidance and diffusion term) further improves guidance convergence.
+
+\subsection{(skip) CADS: Unleashing the Diversity of Diffusion
+Models through Condition-Annealed Sampling}
+\fullcite{sadat2024cads}
+\begin{itemize}
+    \item High classifier guidance scale means sampling from a very peaked distribution, which leads to non-diverse samples (especially for the same conditioning)
+    \item The diversity can be increased while maintaining high sample quality by adding scheduled, monotonically decreasing Gaussian noise to the conditioning vector during inference. This noising is interpreted as smoothing the conditional distribution, especially early in the sampling process.
+    \item The schedule reduces the amount of Gaussian corruption as the inference processes, and a piecewise linear schedule for different noise/guidance weightings (similar to diffusion forward process). They also rescale the perturbed conditoning signal to retain the mean and std of the original conditioning signal.
+\end{itemize}
+
+\subsection{Boosting Diffusion Models with Moving Average Sampling in Frequency Domain}
 \fullcite{qian2024boosting}
 
 
 \begin{itemize}
     \item The authors propose to use moving averages over the $x_0$-prediction to stabilize sampling. For DDIM, this is straightforward plug-and-play. For other samplers, the $x_0$-prediction can be calculated by the noise prediction and then plugged in for sampling.
     \item Through the intuition that the diffusion model first generates low-frequency signals and then gradually adds high-frequency details, they employ a Discrete Wavelet Transform (DTW) to decompose the $x_0$-prediction into four wavelet subbands and separately apply moving averages with different parameters on each band. At each time step, the bands are converted back to the image domain via Inverse DWT.
-\end{itemize}
-
-\paragraph{Questions}
-\begin{itemize}
     \item The method is only evaluated on FID, the diversity is not measured so the results are difficult to interpret.
 \end{itemize}
 
+\subsection{Towards memorization-free diffusion models}   
+\fullcite{chen2024towards}
 
-\section{Analysis of classifier-free guidance weight schedulers}
+
+\subsection{Analysis of classifier-free guidance weight schedulers}
 \fullcite{wang2024analysis}
 \begin{itemize}
-    \item 
+    \item Finding the right balance between sample quality and diversity is a challenge in picking a suitable guidance scale $\omega$
+    \item Instead of a constant number, use a simple monotonically increasing schedule as too much guidance at the beginning of the denoising process is harmful. More advances schedules like parameterized ones can increase performance further but do not generalize across models and tasks.
+    \item No guidance at the beginning of the sampling improves FID, no guidance at the end reduces FID. However, an adequate level of guidance across the entire sampling process is necessary for the best performance. The authors hypothesize that the guidance and generation terms may be adversarial during inference.
+    \item Metrics: FID for sample quality, Clip-Score (CS) for alignment and the std over Dino-v2 image embeddings for diversity over multiple generations of the same prompt
 \end{itemize}
 
-\section{REG: Rectified Gradient Guidance for Conditional Diffusion Models}
+\subsection{(skip) The Unreasonable Effectiveness of Gaussian Score Approximation for Diffusion Models and its Applications}
+\fullcite{wang2024the}
+\begin{itemize}
+    \item In the high-noise regime of diffusion models, the score predicted by the neural network is well-approximated by a Gaussian model. In the low-noise regime, Gaussian mixture models approximate neural scores better than the score of the training distribution.
+    \item The solution of the Gaussian model suggests a geometric sample generation: the estimated data point ($x_0$) begins at the center of the distribution and travels along the data manifold, moving first along high variance axes and then along the lower variance axes. Concurrently, the state $x_t$ in the ambient space rotates towards the evolving endpoint estimate. 
+\end{itemize}
+
+\subsection{REG: Rectified Gradient Guidance for Conditional Diffusion Models}
 \fullcite{gao2025reg}
 
 
@@ -257,7 +349,7 @@ Only a relatively small portion of the model capacity of the diffusion model nee
     \item The paper proposes a rectified guidance term. Despite lower error and better FID/IS pareto fronts, it requires computation of an additional Jacobian matrix compared to vanilla CFG.
 \end{itemize}
 
-\section{Eliminating Oversaturation and Artifacts of High Guidance Scales in Diffusion Models}
+\subsection{Eliminating Oversaturation and Artifacts of High Guidance Scales in Diffusion Models}
 \fullcite{sadat2024eliminating}
 
 
@@ -276,14 +368,14 @@ Only a relatively small portion of the model capacity of the diffusion model nee
 \end{itemize}
 
 
-% \section{}
+% \subsection{}
 % \fullcite{}
 % \paragraph{Questions}
 % \begin{itemize}
 %     \item 
 % \end{itemize}
 
-% \section{}
+% \subsection{}
 % \fullcite{}
 
 % 
@@ -298,22 +390,18 @@ Only a relatively small portion of the model capacity of the diffusion model nee
 
 
 
-\section*{Overall Summary and Questions}
+\subsection*{Overall Summary and Questions}
 \begin{itemize}
     \item CFG is a technique to mix scores of a conditional and unconditional model to balance mode coverage and sample fidelity. This combined model is strangely better than a conditional or an unconditional model. In practice, the conditional model gets the majority of the compute budget and its score is most influential during sampling (high weight).
     \item CFG was originally intended to construct a new noise network to sample from a scaled distribution instead. This has been shown to not be the case for simpler tasks such as Gaussian mixtures. The intermediate distributions and the final distributions are very difficult to characterize outside specifically constructed cases (multi-delta, Gaussian, linear model).
     \item CFG provides a way to trade-off mode coverage (prompt alignment, diversity) with sample fidelity, although empirically it has been shown that very high prompt alignment and very high sample fidelity can be achieved while maintaining high generalization capability and only sacrificing some diversity in generations. Why and how this happens is still unclear.
-    \item One intuition why CFG works so well could be that we can not train but we can sample from a higher quality underlying data distribution. Natural images contain for example many objects and are often cluttered, whereas there is a subset of clean images with a single object which is perceived as higher quality. It is however questionable how to measure the higher perceived quality (FID compares to samples from the distribution).
+    \item One intuition why CFG works so well could be that we can not train, but we can sample from a higher quality underlying data distribution. Natural images contain for example many objects and are often cluttered, whereas there is a subset of clean images with a single object which is perceived as higher quality. It is however questionable how to measure the higher perceived quality (FID compares to samples from the distribution).
     \item Since people are maximizing the FID and IS scores as this is measurable, are there optimal mixtures of the conditional / unconditional scores such that each metric is optimized?
     \item CG takes an unconditional model and includes a gradient ascent step towards a classifier. CFG largely takes a conditional model and removes "unconditional likelihood". Could we go back and do the same for CG, so train a conditional model and then during sampling increase diversity through increasing classifier entropy?
 \end{itemize}
 
-\section*{TODOs}
+\subsection*{TODOs}
 \begin{itemize}
-    \item \fullcite{wang2024the}
-    \item \fullcite{sadat2024cads}
-    \item \fullcite{shen2024understanding}
-    \item \fullcite{chen2024towards}
     \item \fullcite{skreta2024superposition}
     \item \fullcite{sadat2024no}
     \item \fullcite{chen2025s2guidancestochasticselfguidance}
@@ -330,6 +418,63 @@ Only a relatively small portion of the model capacity of the diffusion model nee
     \item \fullcite{shah2025does}
 \end{itemize}
 
-% \printbibliography
- 
+
+
+\section{Conditional Diffusion (Image) Sampling Metrics}
+
+\subsection{A note on the evaluation of generative models}
+\fullcite{theis2015note}
+\begin{itemize}
+    \item The objective function in training yields a different behavior of the model. Optimizing maximum mean discrepancy (MMD) or Jensen-Shannon divergence (JSD) yields a Gaussian which fits one mode well but ignores other parts of the data. Maximizing average log-likelihood / minimizing the Kullback-Leibler divergence avoids assigning extremely small probability to any data point but assigns a lot of probability mass to non-data regions. Depending on the downstream task, a different property may be desired.
+    \item For evaluation, the average log-likelihood is disconnected to image quality in high-dimensional spaces:
+    \begin{itemize}
+        \item Poor log-likelihood but great samples:\\ simple lookup table for training data can generate great samples but has poor likelihood on unseen data, a mixture of Gaussians centered around training data can generate high quality images for imperceptible noise but has poor likelihood estimation 
+        \item Great log-likelihood but poor samples:\\ consider a mixture model of $0.01 p(x) + 0.99 q(x)$, where $p(x)$ is a good model wrt to log-likelihood and $q(x)$ is a bad model. Therefore, 99\% of samples come from the bad model. However, $\log[0.01 p(x) + 0.99 q(x)]\geq \log[0.01 p(x)]=\log p(x) - \log 100$, where $\log p(x)$ is proportional to the dimensionality d but $\log 100$ stays constant. The difference between log-likelihoods of different models on 32x32 data can already be in the thousands, wheres $\log 100$ is only about 4.61 nats. This shows that a model can have large average log-likelihood but generate very poor samples.
+        \item Good log-likelihood and great samples: \\ in the above mixture, the good model could have been chosen 99\% of the time, producing samples indistinguishable from the real images 99\% of the time. The log-likelihood would however only change by at most 4.61 nats. This shows that any model can be turned into a model which produces realistic samples at little expense to its log-likelihood. Log-likelihood and visual appearance of samples are therefore largely independent.
+    \end{itemize}
+    \item Evaluation based on samples and nearest neighbor in the data set is difficult:
+    \begin{itemize}
+        \item Nearest neighbors are typically determined based on Euclidean distance. But already perceptually small changes can lead to large changes in Euclidean distance. A simple pixel shift can lead to perceptually negligible difference but large Euclidean distance, possibly changing the nearest neighbor. Note that with a bigger dataset, a switch to a different nearest neighbor becomes more likely.
+        \item Even when overfitting, most models will not reproduce perfect or trivially transformed copies of the training data. In this case, no distance metric will find a close match in the training set.
+    \end{itemize}
+    \item An evaluation based on samples is biased towards models which overfit and therefore a poor indicator of a good density model in a log-likelihood sense, which favors models with large entropy. Conversely, a high likelihood does not guarantee visually pleasing samples. %Samples can take on arbitrary form only a few bits from the optimum. 
+    The optimal metric for image quality would be human visual assessment. 
+\end{itemize}
+
+\subsection{Inception Score}
+\fullcite{salimans2016improved}
+\begin{itemize}
+    \item A test of human visual quality assessment to distinguish real and generated images shows that: a) the metric depends on the task setup and the motivation of the annotators, and b) the results change drastically when the annotators get feedback about their mistakes and learn from it. The goal is to have an automated metric, which however correlates well with human judgement.
+    \item Generated samples are fed into an inception model that was trained on ImageNet to get the conditional label distribution $p(y|x)$. Images that contain meaningful objects should have a conditional label distribution $p(y|x)$ with low entropy (they belong to few object classes). The model should also generate varied images, so the marginal $∫ p(y|x = G(z))dz$ should have high entropy (the variance over the images should be large). Combining these two requirements, the proposed metric is: 
+    $$
+    I S\left(p_{g e n}, p_{d i s}\right):=\exp \left(\mathbb{E}_{x \sim p_{g e n}}\left[D_{K L}\left(p_{d i s}(\cdot \mid x) \| \int p_{d i s}(\cdot \mid x) p_{g e n}(x) d x\right)\right]\right)\enspace,
+    $$ with $p_{g e n}$ as the generative distribution and $p_{d i s}$ as an inceptionv3 classifier predicting a lable distribution per sample.
+    The metric has to be calculated over a large sample set (50k) as it measures diversity as well.
+\end{itemize}
+
+\subsection{Frenchet Inception Distance}
+\fullcite{heusel2017gans}
+\begin{itemize}
+    \item Any distance between the probability of observing real world data $p_{data}$ and the probability of generating model data $p_{g e n}$ can serve as a performance measure for generative models.
+    \item Likelihood is the best known measure, but heavily depends on the noise assumptions for the real data and can be dominated by single samples.
+    \item FID proposed as improvement over IS, as extracted statistics of generated samples are not compared to statistics of the real world samples.
+    \item Just as in IS, a pre-trained inception model is used to extract vision-relevant features. Then, (for practical reasons) the first and second moments are considered. As the Gaussian is the maximum entropy distribution for given mean and covariance, the assumption is that the extracted features follow a multidimensional Gaussian. The difference between the Gaussian of the generated samples and the Gaussian of the real data is measured by the Frenchet Distance (aka Wasserstein-2 distance) as:
+    $$
+  F I D=\left\|\mu-\mu_w\right\|^2+\operatorname{tr}\left(\Sigma+\Sigma_w-2\left(\Sigma \Sigma_w\right)^{\frac{1}{2}}\right)\enspace,
+  $$
+  where $\mathcal{N}\left(\mu_w, \Sigma_w\right)$ is a multivariate normal distribution estimated from inceptionv3 features of 50k fake images, and $\mathcal{N}\left(\mu, \Sigma\right)$ as a multivariate normal distribution estimated from inceptionv3 features of all real images in the training data set.
+\end{itemize}
+  
+
+
+\subsection{Precision \& Recall}
+\fullcite{sajjadi2018assessing}
+
+\subsection{Improved Prec.  ision \& Recall}
+\fullcite{kynkaanniemi2019improved}
+
+\subsection{Density \& Coverage}
+\fullcite{pmlr-v119-naeem20a}
+
+
 \end{document}
