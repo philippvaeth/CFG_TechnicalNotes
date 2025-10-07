@@ -320,10 +320,6 @@ Models through Condition-Annealed Sampling}
     \item The method is only evaluated on FID, the diversity is not measured so the results are difficult to interpret.
 \end{itemize}
 
-\subsection{Towards memorization-free diffusion models}   
-\fullcite{chen2024towards}
-
-
 \subsection{Analysis of classifier-free guidance weight schedulers}
 \fullcite{wang2024analysis}
 \begin{itemize}
@@ -458,23 +454,91 @@ Models through Condition-Annealed Sampling}
     \item Any distance between the probability of observing real world data $p_{data}$ and the probability of generating model data $p_{g e n}$ can serve as a performance measure for generative models.
     \item Likelihood is the best known measure, but heavily depends on the noise assumptions for the real data and can be dominated by single samples.
     \item FID proposed as improvement over IS, as extracted statistics of generated samples are not compared to statistics of the real world samples.
-    \item Just as in IS, a pre-trained inception model is used to extract vision-relevant features. Then, (for practical reasons) the first and second moments are considered. As the Gaussian is the maximum entropy distribution for given mean and covariance, the assumption is that the extracted features follow a multidimensional Gaussian. The difference between the Gaussian of the generated samples and the Gaussian of the real data is measured by the Frenchet Distance (aka Wasserstein-2 distance) as:
+    \item The last pooling layer in a pre-trained inception model is used to extract vision-relevant features (d=2048). Then, (for practical reasons) the first and second moments are considered. As the Gaussian is the maximum entropy distribution for given mean and covariance, the assumption is that the extracted features follow a multidimensional Gaussian. The difference between the Gaussian of the generated samples and the Gaussian of the real data is measured by the Frenchet Distance (aka Wasserstein-2 distance) as:
     $$
   F I D=\left\|\mu-\mu_w\right\|^2+\operatorname{tr}\left(\Sigma+\Sigma_w-2\left(\Sigma \Sigma_w\right)^{\frac{1}{2}}\right)\enspace,
   $$
   where $\mathcal{N}\left(\mu_w, \Sigma_w\right)$ is a multivariate normal distribution estimated from inceptionv3 features of 50k fake images, and $\mathcal{N}\left(\mu, \Sigma\right)$ as a multivariate normal distribution estimated from inceptionv3 features of all real images in the training data set.
 \end{itemize}
   
+COMMENT Philipp: Are FID and IS really that different? The difference between the features in the last pooling layer and the output distribution should be almost none (\url{https://pytorch.org/hub/pytorch_vision_inception_v3/}). They do in the end measure different things, but there may be a theoretical equivalence under assumptions?
 
 
 \subsection{Precision \& Recall}
 \fullcite{sajjadi2018assessing}
+ \begin{itemize}
+    \item FID correlates well with perceived quality and is sensitive to mode dropping, but it can't distinguish the quality of generated samples from the coverage of the target distribution. Failure cases are also hidden in this single quantity.
+    \item Given a reference distribution $P$ and a learned distribution $Q$, precision intuitively measures the quality of samples from $Q$, while  recall measures the proportion of $P$ that is covered by $Q$. These measures can quantify the degree of mode dropping and mode inventing based on samples from the true and the learned distributions as well. (The measure shows that GANs often produce "sharper" images, but can suffer from mode collapse (high  precision, low recall), while VAEs produce "blurry" images, but cover more modes of the distribution  (low precision, high recall))
+    \item A pre-trained Inception network embeds the samples and real images (for example last pooling layer). The embeddings are clustered by mini-batch k-means with k = 20. This reduces the problem to a one dimensional problem where the histogram over the cluster assignments can be meaningfully compared. Hence, failing to produce samples from a cluster with many samples from the true distribution will hurt recall, and producing  samples in clusters without many real samples will hurt precision. As the clustering algorithm is randomized, we run the procedure several times and average over the PRD curves.
+\end{itemize}
 
-\subsection{Improved Prec.  ision \& Recall}
+\subsection{Improved Precision \& Recall}
 \fullcite{kynkaanniemi2019improved}
+\begin{itemize}
+    \item "For instance, it is interesting that while recent state-of-the-art generative methods claim to optimize FID, in the end the (uncurated) results are almost always produced using another model that explicitly sacrifices variation, and often FID, in favor of higher quality samples from a truncated subset of the domain."
+    \item The classic definition of precision and recall is sufficient for disentangling the effects of sample quality and manifold coverage. However, it fails if many samples are packed together (for example as a result mode collapse or truncation). It also does not allow binary membership queries such as “does sample x lie in the support of distribution P ?”.
+    \item Take an equal number of real and generated samples and embed them into a high-dimensional feature space of a pre-trained classifier. For both sets of images, the manifold is estimated by calculating pairwise Euclidean distances between all feature vectors in the set and, for each feature vector, forming a hypersphere with radius equal to the distance to its kth nearest neighbor. Together, these hyperspheres define a volume in the feature space that serves as an estimate of the true manifold.
+    \item Precision is quantified by querying for each generated image whether the image is within the estimated manifold of real images. Recall is calculated by querying for each real image whether the image is within estimated manifold of generated image.
+    \item Like FID, the improved precision/recall needs a large sample size (50k). The size of the neighborhood, k, is a compromise between covering the entire manifold (large values) and overestimating its volume as little as possible (small values). In practice, $k = 3$ is a robust choice.
+\end{itemize}
+
 
 \subsection{Density \& Coverage}
 \fullcite{pmlr-v119-naeem20a}
+\begin{itemize}
+    \item The precision and recall metrics are already a big improvement over FID, but are still not reliable yet. For example, they fail to detect the match between two identical distributions, they are not robust against outliers, and the evaluation hyperparameters are selected arbitrarily. Even the improved Precision/Recall fall short on the requirements. 
+    \item Pre-trained feature extractors have a strong data set bias and fail if the target data distribution differs from the trained data statistics. Therefore, random CNN feature embeddings can be used in such cases.
+    \item Original Precision/Recall assumes that the embedding space is uniformly dense, relies on the initialization-sensitive k-means algorithm for support estimation, and produces an infinite number of values as the metric.
+    \item Improved Precision/Recall is still vulnerable to outliers and limited by computational efficiency. Generating many fake samples around a real outlier is enough to increase the precision measure. The recall measure gains points for real samples contained in the overestimated fake manifold. The manifold computation is per model and expensive.
+    \item Instead of precision quantifying a binary decision if a generated data point is within any data point hypersphere, density counts how many data set spheres contain the generated image. Density therefore rewards generating samples in high density regions, which improves robustness towards outliers.
+    \item Instead of constructing the manifold around fake samples and quantifying how many real images are within the generated manifold, coverage estimates the manifold around the real images and measures the fraction of real samples whose neighborhood contain at least one fake sample. This requires the manifold computation only once per data set (instead of model), and improves the robustness towards outliers as the generated samples tend to have more outliers than the data.
+\end{itemize}
 
+\subsection{Consistency-diversity-realism Pareto fronts of conditional image generative models}
+\fullcite{astolfi2024consistency}
+\begin{itemize}
+    \item Current research in generative models mostly focuses on creative applications that are predominantly concerned with human preferences of image quality and aesthetics (a single high-quality and consistent sample fulfills the current optimization criteria. This vastly disregards representation diversity). 
+    \item Pareto fronts provide a holistic view on the consistency-diversity-realism multi-objective. Inter-sample similarity and recall is used to measure representation diversity; image reconstruction quality and precision to quantify realism; and the Davidsonian scene graph score to assess prompt-generation consistency. The metrics are split for marginal metrics (metric over all generations and all prompts) and conditional metrics (metric over all generations per prompt, can be averaged for a summary statistic).
+    \item The experiments suggest that realism and consistency can both be improved simultaneously; however there exists a clear tradeoff between realism/consistency and diversity. By looking at Pareto optimal points, earlier models are better at representation diversity and worse in consistency/realism, and more recent models excel in consistency/realism while decreasing significantly the representation diversity.
+    \item CFG is a inference trade-off between image fidelity and diverstiy, post hoc filtering is used to improve consistency
+\end{itemize}
+
+
+\subsection{Diffusion Memorization}
+
+\subsubsection{Do deep generative models know what they don't know?}
+\fullcite{nalisnick2018deep}
+\subsection{On Memorization in Probabilistic Deep Generative Models}
+\fullcite{van2021memorization}
+
+\subsection{On the De-duplication of LAION-2B}
+\fullcite{webster2023duplication}
+
+\subsection{Extracting Training Data from Diffusion Models}
+\fullcite{carlini2023extracting}
+
+\subsection{Diffusion Art or Digital Forgery? Investigating Data Replication in Diffusion Models}
+\fullcite{somepalli2023diffusion}
+
+\subsection{Diffusion Probabilistic Models Generalize when They Fail to Memorize}
+\fullcite{yoon2023diffusion}
+
+\subsection{Towards memorization-free diffusion models}   
+\fullcite{chen2024towards}
+
+\subsection{Detecting, Explaining, and Mitigating Memorization in Diffusion Models}
+\fullcite{wen2024detecting}
+
+\subsection{Selective Underfitting in Diffusion Models}
+\fullcite{song2025selectiveunderfittingdiffusionmodels}
+
+\subsubsection{How Diffusion models memorize}
+\fullcite{kim2025diffusion}
+
+\subsection{On Memorization in Diffusion Models}
+\fullcite{gu2025memorizationdiffusionmodels}
+
+\subsection{On the Edge of Memorization in Diffusion Models}
+\fullcite{buchanan2025edge}
 
 \end{document}
