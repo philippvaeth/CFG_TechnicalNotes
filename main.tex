@@ -1,7 +1,7 @@
 \documentclass{article}
 \usepackage[english]{babel}
 \usepackage[
-  style=chicago-authordate,
+  style=authoryear,
   backend=biber,
   maxcitenames=2,
   maxbibnames=99,
@@ -504,9 +504,9 @@ COMMENT Philipp: Are FID and IS really that different? The difference between th
 \end{itemize}
 
 
-\subsection{Diffusion Memorization}
+\section{Diffusion Memorization}
 
-\subsubsection{Do deep generative models know what they don't know?}
+\subsection{Do deep generative models know what they don't know?}
 \fullcite{nalisnick2018deep}
 \subsection{On Memorization in Probabilistic Deep Generative Models}
 \fullcite{van2021memorization}
@@ -516,29 +516,82 @@ COMMENT Philipp: Are FID and IS really that different? The difference between th
 
 \subsection{Extracting Training Data from Diffusion Models}
 \fullcite{carlini2023extracting}
+\begin{itemize}
+    \item Only 50 training images from 175 million generated images by Stable Diffusion and extracted 200-300 training images from $2^{20}$ generated images by DDPM and its variant are memorized. This highlights the memorization gap between empirical diffusion models and the theoretical optimum.
+\end{itemize}
 
 \subsection{Diffusion Art or Digital Forgery? Investigating Data Replication in Diffusion Models}
 \fullcite{somepalli2023diffusion}
+\begin{itemize}
+    \item Training data duplication and text conditioning play significant roles in the memorization of diffusion models from empirical studies
+\end{itemize}
+
+\subsection{Understanding and mitigating copying in diffusion models}
+\fullcite{somepalli2023understanding}
 
 \subsection{Diffusion Probabilistic Models Generalize when They Fail to Memorize}
 \fullcite{yoon2023diffusion}
+\begin{itemize}
+    \item Generalization of diffusion models is a failure to memorize the training data when data size is large and model width is comparatively small and this memorization-generalization dichotomy may manifest at the level of classes.
+\end{itemize}
 
 \subsection{Towards memorization-free diffusion models}   
 \fullcite{chen2024towards}
 
 \subsection{Detecting, Explaining, and Mitigating Memorization in Diffusion Models}
 \fullcite{wen2024detecting}
+\begin{itemize}
+    \item Novel approach to detect memorized prompts and mitigate memorization for Stable Diffusion
+\end{itemize}
+
+\subsection{Finding NeMo : Localizing Neurons Responsible For Memorization in Diffusion Models}
+\fullcite{hintersdorf2024finding}
+\begin{itemize}
+    \item Memorization in text-to-image diffusion models is localized to specific neurons.
+\end{itemize}
+
+\subsection{The Emergence of Reproducibility and Consistency in Diffusion Models}
+\fullcite{zhang2024emergence}
+\begin{itemize}
+    \item Given the same noise input, different diffusion models often generate remarkably similar samples through a deterministic sampler, manifesting in memorization and generalization regimes.
+\end{itemize}
+
+\subsection{An analytic theory of creativity in convolutional diffusion models}
+\fullcite{kamb2024analytic}
+\begin{itemize}
+    \item Two inductive biases (locality and equivariance) in common architectures of diffusion models prevent convergence to the ideal score function. These two inductive biases do not fully capture the behavior of trained models, particularly those with self-attention architectures.
+\end{itemize}
 
 \subsection{Selective Underfitting in Diffusion Models}
 \fullcite{song2025selectiveunderfittingdiffusionmodels}
 
-\subsubsection{How Diffusion models memorize}
+\subsection{How Diffusion models memorize}
 \fullcite{kim2025diffusion}
 
 \subsection{On Memorization in Diffusion Models}
 \fullcite{gu2025memorizationdiffusionmodels}
+\begin{itemize}
+    \item Assuming sufficient model capacity, diffusion models optimized by denoising score matching have an optimal solution, which can only produce samples that replicate the training data. This theoretical memorization behavior is empirically contradicted by the good generalization capability of SODA diffusion models like EDM.
+    \item Memorization definition (\cite{yoon2023diffusion}): a sample is memorized if the $\ell_2$ distance to the nearest neighbor is smaller than 1/3 of the distance to the second-nearest neighbor in the training data (empirical threshold aligned with human memorization)
+    \item Most experiments are on CIFAR10 in a highly over-parameterized setting (maximum 5k images vs 56M parameter models), no memorization in unconditional setting with full 50k CIFAR10 -> conclusions are therefore not reliable
+    \item Interestingly, an EDM model conditioned on a unique class label for CIFAR10 (50k images) memorizes more of the training data for more training epochs (eventually over 65\%), whereas the unconditional model does not memorize at all
+    \item A discriminative InceptionV3 (<25M parameters) can almost memorize ImageNet (1.28M images) (\cite{zhang2016understanding}), a generative EDM (56M) can not memorize CIFAR10 (50K images). Over-parameterized models generalize well to real data distribution and even perfectly fit to the training dataset (benign overfitting). Nevertheless, diffusion models demonstrate adverse generalization performance.
+\end{itemize}
 
 \subsection{On the Edge of Memorization in Diffusion Models}
 \fullcite{buchanan2025edge}
 
+
+\subsection{Other relevant papers}
+\begin{itemize}
+    \item \fullcite{zhang2016understanding}
+    \begin{itemize}
+        \item InceptionV3 (<25M parameters) can almost memorize ImageNet (1.28M images).
+    \end{itemize}
+    \item \fullcite{bartlett2020benign}
+    \begin{itemize}
+        \item Over-parameterized models generalize well to real data distribution and even perfectly fit to the training dataset.
+    \end{itemize}
+    \item \fullcite{nakkiran2021deep}
+\end{itemize}
 \end{document}
