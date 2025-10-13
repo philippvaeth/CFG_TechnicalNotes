@@ -508,8 +508,22 @@ COMMENT Philipp: Are FID and IS really that different? The difference between th
 
 \subsection{Do deep generative models know what they don't know?}
 \fullcite{nalisnick2018deep}
+\begin{itemize}
+    \item Discriminative models using NNs can predict the wrong class with high confidence (for example by rotating MNIST digits). One way to avoid this is to only predict the class on inputs with high density under a trained generative model. 
+    \item Autoregressive models, flow-based models and VAEs assign higher density to SVHN than to CIFAR-10 as their training data. This observation translates to other image data sets.
+    \item Through a second order analysis, the difference in likelihoods on the training data set and a secondary data set can be explained by the model curvature and the data's second moment.
+    \item SVHN seems to "sit inside of" CIFAR-10 with roughly the same mean but smaller variance, resulting in its higher likelihood. 
+    \item The difference of likelhoods scales with the difference in data variances. For example, SVHN has the smallest variance and largest likelihood. This means the likelihood can be arbitrarily increases by decreasing the data set variance (which means graying RGB images, so bringing the pixel values closer to 128). Reducing the variance of latent representations has the same effect.
+    \item Comparing the likelihoods of deep generative models alone cannot identify the training set or inputs like it.
+\end{itemize}
 \subsection{On Memorization in Probabilistic Deep Generative Models}
 \fullcite{van2021memorization}
+\begin{itemize}
+    \item A common technique to measure memorization of a sample in deep generative models is a nearest neighbor search in the training set. As euclidean distance in pixel space is easily fooled (for example by pixel shifts), NN in the feature space of a secondary model or cropping/downsampling before NN can be used.
+    \item The memorization aspect for the paper is "an increased probability of generating a sample that closely resembles the training data in regions of the input space where the algorithm has not seen sufficient observations to enable generalization" (for example if an outlier is responsible for all the density in the area, a generated sample out of this area should be very similar to the outlier data point). This is in contrast to memorization due to data duplication, which is the case for common data sets.
+    \item The leave-one-out (LOO) memorization score is proposed based on the change in the probability density of an observation that occurs when it is removed from the data. It is defined for a single data point as the difference in log probability for a model trained on the entire data set versus a model trained on the data set without the data point. Each log probability calculation is averaged over multiple training runs with different initializations. 
+    \item In practice to make the score tractable, a K-fold approach is used instead, where disjoint subsets of the training set are removed and the log probability for all observations is computed.
+\end{itemize}
 
 \subsection{On the De-duplication of LAION-2B}
 \fullcite{webster2023duplication}
