@@ -618,13 +618,22 @@ COMMENT Philipp: Are FID and IS really that different? The difference between th
 \subsection{Detecting, Explaining, and Mitigating Memorization in Diffusion Models}
 \fullcite{wen2024detecting}
 \begin{itemize}
-    \item Novel approach to detect memorized prompts and mitigate memorization for Stable Diffusion
+    \item  When provided with the same text prompt but different initializations, diffusion models can generate a diverse set of images. Given different text prompts but the same initialization, the resulting images often display semantic similarities. For memorized prompts, the initialization appears to be irrelevant as the generations consistently converge to a specific memorized visualization. This behavior implies that the model might be overfitting to both the prompt and a certain denoising trajectory, which leads to the memorized image.
+    \item The detection metric based on this intuition is defined as the average L2 distance over the sampling steps between the unconditional noise estimate and the prompt-conditional noise estimate. If the metric is higher than an empirically found threshold based on knowingly memorized prompts, it counts as memorized.
+    \item Some tokens in the prompt are critical in steering the sampling direction. By minimizing the L2 distance between the unconditional and prompt-conditional noise estimates for a specific $x_t$, the magnitude of the change for each token shows the importance of each token.
+    \item During sampling, the prompt (at $t=0$) can be adapted by optimizing over the detection metric. During training, a data point can be dropped from the batch if memorization is detected.
 \end{itemize}
 
 \subsection{Finding NeMo : Localizing Neurons Responsible For Memorization in Diffusion Models}
 \fullcite{hintersdorf2024finding}
 \begin{itemize}
-    \item Memorization in text-to-image diffusion models is localized to specific neurons.
+    \item The similarity between the first denoising steps for different initial seeds is a proxy to quantify the memorization strength. The structural similarity index measure (SSIM) measures the difference between different $\delta=\epsilon_\theta\left(x_T, T, y\right)-x_T$ for different initial seeds. A higher SSIM indicates higher similarity between the noise differences, reflecting a higher degree of memorization. The threshold is empirically found based on a hold-out set of non-memorized prompts.
+    \item Memorization in text-to-image diffusion models is localized to specific neurons, pruning them prevents the reproduction of the data point based on the same initial noise sample. The evidence in the paper is for StableDiffusion v1.4 and a very specific part of the neural network.
+    \item NEMO works in stages over the value neurons in the cross-attention layers in part of the U-net:
+    \begin{itemize}
+        \item[1] Calculate z scores of neuron activations based on a non-memorized hold out set. Then use this as an empirical threshold to find OOD activations. Then turn off these activations, apply the memorization metric above and repeat iteratively. This makes up a candidate set of neurons responsible for memorization.
+        \item[2] The activations are further grouped and turned off by layers, then individual units until only the highest impact neurons are found.
+    \end{itemize}
 \end{itemize}
 
 \subsection{The Emergence of Reproducibility and Consistency in Diffusion Models}
@@ -680,5 +689,9 @@ COMMENT Philipp: Are FID and IS really that different? The difference between th
         \item Over-parameterized models generalize well to real data distribution and even perfectly fit to the training dataset.
     \end{itemize}
     \item \fullcite{nakkiran2021deep}
+    \item \fullcite{NEURIPS2023_012af729}
+    \begin{itemize}
+        \item A method for training diffusion models using corrupted data to prevent the model from overfitting to the training data.
+    \end{itemize}
 \end{itemize}
 \end{document}
