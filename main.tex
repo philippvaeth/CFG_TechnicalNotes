@@ -603,6 +603,17 @@ COMMENT Philipp: Are FID and IS really that different? The difference between th
 
 \subsection{Towards memorization-free diffusion models}   
 \fullcite{chen2024towards}
+\begin{itemize}
+    \item The primary causes of memorization is image and text duplication in training datasets, along with the high specificity of user prompts for text conditioning.
+    \item Pixel-level memorization is detected by the negative L2 norm in pixel space of a sample and its NN in the training data, normalized by $1/2$ of the average L2 norm to the 50 NN in the training data. 
+    \item Object-level memorization is detected by the dot product of Self-supervised Copy Detection (SSCD) embeddings between the sample and the train NN
+    \item Anti-Memorization Guidance (AMG) builds on top of CFG and CG to prevent memorization during sampling when there is high similarity of the one-step denoising estimate to any training data point, consisting of three terms:
+    \begin{itemize}
+        \item Desspecification guidance reduces caption specificity by guiding in the opposite direction of CFG, bounded by scaling to prevent low text-image alignment
+        \item Caption deduplication guidance steers away from the direction of perfect text conditioning simulated through duplicated captions that would lead to memorization.
+        \item Dissimilarity guidance guides towards low similarity score wrt to the closest training data point.
+    \end{itemize}
+\end{itemize}
 
 \subsection{Detecting, Explaining, and Mitigating Memorization in Diffusion Models}
 \fullcite{wen2024detecting}
@@ -619,7 +630,17 @@ COMMENT Philipp: Are FID and IS really that different? The difference between th
 \subsection{The Emergence of Reproducibility and Consistency in Diffusion Models}
 \fullcite{zhang2024emergence}
 \begin{itemize}
-    \item Given the same noise input, different diffusion models often generate remarkably similar samples through a deterministic sampler, manifesting in memorization and generalization regimes.
+    \item Measure of model reproducibility: the probability (empirical estimate based on 10k noise samples) of a generated sample pair (x1, x2) from two different diffusion models to have self-supervised copy detection (SSCD) similarity larger than 0.6 starting from the same iid noise; the probability of an MAE < 15.0 based on [0,255] image comparisons
+    \item Measure of model generalizability: 1 - probability of maximum model reproducibility score over the training dataset larger than 0.6. This measures the dissimilarity between the generated sample and all samples from the training dataset.
+    \item "Consistent model reproducibility": Given the same noise input, different diffusion models often generate remarkably similar samples through a deterministic sampler, manifesting in memorization and generalization regimes. This phenomenon also occurs for conditional diffusion models and diffusion models for inverse modeling.
+    \item Different diffusion models consistently reach the same data distribution and score function regardless of diffusion model frameworks, model architectures, training procedures, sampling procedures or perturbation kernels. This does not seem to hold for other generative models like GANs or VAEs.
+    \item Diffusion models learn distinct distributions based on the training data size in two distinct training regimes: (i) “memorization regime,” where the diffusion model overfits to the training data distribution, and (ii) “generalization regime,” where the model learns the underlying data distribution
+    \item Memorization regime occurs when the model has much larger capacity than the size of training data. The emergence of reproducibility is due to the fact that all diffusion models memorize the same multi-delta distribution of training samples. Given no generalizability, training diffusion models in this regime might hold limited practical interest.
+    \item Generalization regime emerges when the diffusion model not only regains its reproducibility but also becomes capable of generating new samples distinct from the training data and usually happens when the diffusion model is trained on large dataset without full capacity to memorize the whole dataset. There is a clear transition from the memorization regime to the generalization regime as the training samples increase.
+    \item Model reproducibility of conditional models exhibits in a structured way and is strongly related to unconditional counterparts. It appears that the conditional diffusion model learns to map from the same noise space to each individual image manifold corresponding to each class. In contrast, the unconditional diffusion model maps the noise space to a broader image manifold as a union over image class manifolds. A theoretical analysis of this unique reproducibility relationship holds the promise of providing valuable insights. When comparing the same model with identical initial noise but different class conditions, there is similarity in low-level structural attributes, such as color, despite differing in semantics.
+    \item For solving inverse problem using diffusion models, model reproducibility holds only within the same type of network architectures. 
+    \item (strong claim) "First empirical evidence that diffusion models can overcome the curse of dimensionality when learning the underlying distribution, enabling effective generalization even with a limited number of training samples."
+    \item Based on the findings of the paper, one can replicate the mapping from a trained diffusion model by training a new score function from generated data (through an open-source API).
 \end{itemize}
 
 \subsection{An analytic theory of creativity in convolutional diffusion models}
