@@ -15,6 +15,12 @@
 \addbibresource{bibliography.bib} % biblatex uses .bib explicitly
 \usepackage[dvipsnames]{xcolor}
 
+\usepackage[many]{tcolorbox}
+\newtcolorbox{tldr}{
+    colback = lightgray, % background color
+    boxrule = 0pt  % no borders
+}
+
 \begin{document}
 \section{Classifier(-free) Guidance}
 \textcolor{ForestGreen}{Discussed on 25 Aug 2025} 
@@ -508,6 +514,11 @@ COMMENT Philipp: Are FID and IS really that different? The difference between th
 
 \subsection{Do deep generative models know what they don't know?}
 \fullcite{nalisnick2018deep}
+
+\begin{tldr}
+The likelihood estimation of autoregressive models, flow-based models and VAEs on a secondary data set depends on the model curvature and the data variance. A data set can therefore be assigned arbitrarily high likelihood by decreasing data variance.
+\end{tldr}
+
 \begin{itemize}
     \item Discriminative models using NNs can predict the wrong class with high confidence (for example by rotating MNIST digits). One way to avoid this is to only predict the class on inputs with high density under a trained generative model. 
     \item Autoregressive models, flow-based models and VAEs assign higher density to SVHN than to CIFAR-10 as their training data. This observation translates to other image data sets.
@@ -519,6 +530,9 @@ COMMENT Philipp: Are FID and IS really that different? The difference between th
 
 \subsection{Does learning require memorization? a short tale about a long tail}
 \fullcite{feldman2020does}
+\begin{tldr}
+    For discriminative models, the only way to fit an example whose label cannot be predicted based on the rest of the dataset is to effectively memorize it.
+\end{tldr}
 \begin{itemize}
     \item Setting is discriminative models - not generative models
     \item The only way to fit an example whose label cannot be predicted based on the rest of the dataset is to effectively memorize it. If a model has to fit random labels and the data set is thus not informative about the label of a data point, the model has to memorize it.
@@ -529,6 +543,9 @@ COMMENT Philipp: Are FID and IS really that different? The difference between th
 
 \subsection{On Memorization in Probabilistic Deep Generative Models}
 \fullcite{van2021memorization}
+\begin{tldr}
+    For low density regions in the data space, samples necessarily need to be close to data points as there is not enough data to enable generalization. The difference in log probability of a leave-one-out likelihood estimation can be used to find these necessarily memorized data points.
+\end{tldr}
 \begin{itemize}
     \item A common technique to measure memorization of a sample in deep generative models is a nearest neighbor search in the training set. As euclidean distance in pixel space is easily fooled (for example by pixel shifts), NN in the feature space of a secondary model or cropping/downsampling before NN can be used.
     \item The memorization aspect for the paper is "an increased probability of generating a sample that closely resembles the training data in regions of the input space where the algorithm has not seen sufficient observations to enable generalization" (for example if an outlier is responsible for all the density in the area, a generated sample out of this area should be very similar to the outlier data point). This is in contrast to memorization due to data duplication, which is the case for common data sets.
@@ -541,6 +558,9 @@ COMMENT Philipp: Are FID and IS really that different? The difference between th
 
 \subsection{On the De-duplication of LAION-2B}
 \fullcite{webster2023duplication}
+\begin{tldr}
+    The paper proposes an efficient way to find data duplicates based on CLIP features. They identify that about 1/3 of the LAION-2B data set to be duplicates.
+\end{tldr}
 \begin{itemize}
     \item LAION-2B is an extremely large image database containing 2 billion images, which was the basis for breakthroughs in computer vision.
     \item Duplicate training data points pose degrade model utility through issues such as higher memorization. This is especially true for large scale data sets thorugh web scrapers, potentially containing many duplicates.
@@ -551,6 +571,14 @@ COMMENT Philipp: Are FID and IS really that different? The difference between th
 
 \subsection{Extracting Training Data from Diffusion Models}
 \fullcite{carlini2023extracting}
+\begin{tldr}
+    \begin{itemize}
+    \item They propose (k,$\ell$,$\delta$)-Eidetic Memorization as an local similarity-aware extension of NN searches
+    \item Higher capacity models, more training iterations, higher model FID, duplicates in the training set, outliers in the training set and a smaller data set are potential contributors to more memorization
+    \item Diffusion models are significantly less private than classifiers trained on the same data, it is however not clear to what extent this is because they are often trained far longer than classifiers
+    \item Diffusion models memorize more data than GANs, even when the GANs reach similar performance. 
+    \end{itemize}
+\end{tldr}
 \begin{itemize}
     % \item Only 50 training images from 175 million generated images by Stable Diffusion and extracted 200-300 training images from $2^{20}$ generated images by DDPM and its variant are memorized. This highlights the memorization gap between empirical diffusion models and the theoretical optimum.
     \item A common question for largescale generative models is whether their impressive results arise from truly novel generations, or are instead the result of direct copying and remixing of their training data. \cite{feldman2020does}'s theory that memorization is necessary for generalization in classifiers may extend to generative models, raising the question of whether the improved performance of diffusion models compared to prior approaches is precisely because diffusion models memorize more. 
@@ -558,7 +586,7 @@ COMMENT Philipp: Are FID and IS really that different? The difference between th
     \item (k,$\ell$,$\delta$)-Eidetic Memorization is a notion of approximate memorization. An example $x$ is memorized by a diffusion model if $x$ is extractable from the diffusion model, and there are at most $k$ training examples that are closer to $x$ than some threshold. In practice, the distance is commonly an $\ell_2$ distance normalized by the dimensions ($\ell \in [0,1]$). The distance can be the cosine similarity in an CLIP embedding space or an $\ell_2$ distance over non-overlapping image patches.
     % \item Membership inference: to find out if a model memorizes, the authors propose to generate 500 generations for the same prompt but with different random seeds, then divide images into non-overlapping patches and measure the maximum $\ell_2$ distance between any two regions. If at least 10 of 500 generations are almost identical, then the entire batch counts as meorized.
     \item Higher capacity models, more training iterations, duplicates in the training set, outliers in the training set and a smaller data set are potential contributors to more memorization. 
-    \item Diffusion models are significantly less private than classifiers trained on the same data, it is however not clear to what extend this is because they are often trained far longer than classifiers.
+    \item Diffusion models are significantly less private than classifiers trained on the same data, it is however not clear to what extent this is because they are often trained far longer than classifiers.
     \item As the quality of generative models increases (FID) so too does the privacy leakage. These results are concerning because they suggest that stronger models of the future may be even less private.
     \item Diffusion models are less private than GANs for membership inference attacks under default training settings, even when the GAN attack is strengthened due to having access to the discriminator (which would be unlikely in practice, as only the generator is necessary to create new images).
     \item Diffusion models memorize more data than GANs, even when the GANs reach similar performance. Diffusion models and GANs memorize many of the same images. Many examples that are easy to extract are duplicated many times (e.g., > 100) in the training data.
@@ -566,6 +594,9 @@ COMMENT Philipp: Are FID and IS really that different? The difference between th
 
 \subsection{Diffusion Art or Digital Forgery? Investigating Data Replication in Diffusion Models}
 \fullcite{somepalli2023diffusion}
+\begin{tldr}
+    Data replication means a generated sample contains an object that appears identically in a training image up to variations from data augmentation. They translate this into a split product metric, where image similarity is given by splitting feature vectors into chunks, computing the inner product between chunks and returning the maximum value.
+\end{tldr}
 \begin{itemize}
     \item Training data duplication and text conditioning play significant roles in the memorization of diffusion models from empirical studies
     \item Definition of replication: A generated image has replicated content if it contains an object (either in the foreground or background) that appears identically in a training image, neglecting minor variations in appearance that could result from data augmentation.
@@ -578,6 +609,9 @@ COMMENT Philipp: Are FID and IS really that different? The difference between th
 
 \subsection{Understanding and mitigating copying in diffusion models}
 \fullcite{somepalli2023understanding}
+\begin{tldr}
+Data duplication is not the only reason why diffusion models memorize, the uniqueness and perplexity of text conditions are a contributing factor. Highly specific (or high perplexity) captions act like keys into the memory of the diffusion model that retrieve specific data points. Resampling captions to avoid duplicate captions and removing images with limited complexity reduces memorization, even if data duplication increases.
+\end{tldr}
 \begin{itemize}
     \item While it is widely believed that duplicated images in the training set are responsible for content replication at inference time, the text conditioning of the model plays a similarly important role. Replication can happen even when the duplication rate in the training set is greatly reduced. Data replication often does not happen for unconditional models, while it is common in the text-conditional case.
     \item When training a diffusion model, it is crucial to carefully manage data duplication to strike a balance between reducing memorization and ensuring high-fidelity of generated images. However, controlling duplication is not enough to prevent replication of training data.
@@ -590,6 +624,9 @@ COMMENT Philipp: Are FID and IS really that different? The difference between th
 
 \subsection{Diffusion Probabilistic Models Generalize when They Fail to Memorize}
 \fullcite{yoon2023diffusion}
+\begin{tldr}
+    A generative model first learns a multi-delta distribution of the training data points. Then, it learns the underlying distribution and therefore can generalize. When the model transitions from the first to the second phase may depend on the classes, train set size and train set complexity. Diffusion models generalize when underparameterized, which is in contrast to deep supervised models which showed generalization despite memorization ("benign overfitting"). 
+\end{tldr}
 \begin{itemize}
     \item They define learning to include the following two types: rote learning (i.e., memorization) and the conceptual learning (which enables generalization). A generative model performs perfect rote learning when it learns to generate from a delta distribution around each training data point. In this case, we say the model has perfectly memorized the training set and say the generated samples are replicates of the training data. A generative model performs perfect conceptual learning when it learns to generate from the true underlying distribution generating the training data. In this case, we say the model generalizes, and this is the desired behavior of a generative model.
     \item For deep supervised learning, trained deep neural networks generalize well despite memorizing (interpolating) training data where “benign overfitting” (Belkin, 2021), claims that overparameterization is not detrimental to the generalization performance.
@@ -603,6 +640,9 @@ COMMENT Philipp: Are FID and IS really that different? The difference between th
 
 \subsection{Towards memorization-free diffusion models}   
 \fullcite{chen2024towards}
+\begin{tldr}
+    They distinguish pixel-level memorization as locally-sensitive L2 norm in pixel space and object-level memorization as the dot product of self-supervised copy detection (SSCD) embeddings. One can reduce memorization during inference by guiding away from the CFG direction while maintaining text-image alignment, away from too good text conditioning, and towards low similarity to closest data point.
+\end{tldr}
 \begin{itemize}
     \item The primary causes of memorization is image and text duplication in training datasets, along with the high specificity of user prompts for text conditioning.
     \item Pixel-level memorization is detected by the negative L2 norm in pixel space of a sample and its NN in the training data, normalized by $1/2$ of the average L2 norm to the 50 NN in the training data. 
@@ -617,6 +657,14 @@ COMMENT Philipp: Are FID and IS really that different? The difference between th
 
 \subsection{Detecting, Explaining, and Mitigating Memorization in Diffusion Models}
 \fullcite{wen2024detecting}
+\begin{tldr}
+    \begin{itemize}
+        \item Same prompt + different initialization = diverse samples
+        \item Different prompt + same initialization = similar semantics
+        \item Memorized prompt = memorized visualization irrespective of initialization
+        \item Diffusion models might overfit to both the prompt and a certain denoising trajectory, causing memorization. This can be detected via the alignment of conditional and unconditional denoising trajectories. By adapting the prompt, the importance of specific tokens can be reduced, preventing memorization.
+    \end{itemize}
+\end{tldr}
 \begin{itemize}
     \item  When provided with the same text prompt but different initializations, diffusion models can generate a diverse set of images. Given different text prompts but the same initialization, the resulting images often display semantic similarities. For memorized prompts, the initialization appears to be irrelevant as the generations consistently converge to a specific memorized visualization. This behavior implies that the model might be overfitting to both the prompt and a certain denoising trajectory, which leads to the memorized image.
     \item The detection metric based on this intuition is defined as the average L2 distance over the sampling steps between the unconditional noise estimate and the prompt-conditional noise estimate. If the metric is higher than an empirically found threshold based on knowingly memorized prompts, it counts as memorized.
@@ -626,6 +674,9 @@ COMMENT Philipp: Are FID and IS really that different? The difference between th
 
 \subsection{Finding NeMo : Localizing Neurons Responsible For Memorization in Diffusion Models}
 \fullcite{hintersdorf2024finding}
+\begin{tldr}
+    The structural similarity index measure (SSIM) between the first denoising steps for different initial seeds is a proxy to quantify the memorization strength. Memorization in text-to-image diffusion models is localized to specific neurons (found by OOD activations), pruning them prevents the reproduction of the data point based on the same initial noise sample. The evidence in the paper is for StableDiffusion v1.4 and a very specific part of the neural network.
+\end{tldr}
 \begin{itemize}
     \item The similarity between the first denoising steps for different initial seeds is a proxy to quantify the memorization strength. The structural similarity index measure (SSIM) measures the difference between different $\delta=\epsilon_\theta\left(x_T, T, y\right)-x_T$ for different initial seeds. A higher SSIM indicates higher similarity between the noise differences, reflecting a higher degree of memorization. The threshold is empirically found based on a hold-out set of non-memorized prompts.
     \item Memorization in text-to-image diffusion models is localized to specific neurons, pruning them prevents the reproduction of the data point based on the same initial noise sample. The evidence in the paper is for StableDiffusion v1.4 and a very specific part of the neural network.
@@ -638,6 +689,14 @@ COMMENT Philipp: Are FID and IS really that different? The difference between th
 
 \subsection{The Emergence of Reproducibility and Consistency in Diffusion Models}
 \fullcite{zhang2024emergence}
+\begin{tldr}
+    \begin{itemize}
+        \item Consistent model reproducibility: Different diffusion models consistently reach the same data distribution and score function regardless of diffusion model frameworks, model architectures, training procedures, sampling procedures or perturbation kernels. This manifests in nearly identical generations for the same noise samples.
+        \item This phenomenon also occurs for conditional diffusion models and diffusion models for inverse modeling. The conditional diffusion model learns to map from the same noise space to each individual image manifold corresponding to each class. The same model with identical initial noise but different class conditions generates samples with similarity in low-level structural attributes, such as color, despite differing in semantics.
+        \item The emergence of reproducibility is due to the fact that all diffusion models memorize the same multi-delta distribution of training samples. This does not seem to hold for other generative models like GANs or VAEs.
+        \item Based on the findings of the paper, one can replicate the mapping from a trained diffusion model by training a new score function from generated data (through an open-source API).
+    \end{itemize}
+\end{tldr}
 \begin{itemize}
     \item Measure of model reproducibility: the probability (empirical estimate based on 10k noise samples) of a generated sample pair (x1, x2) from two different diffusion models to have self-supervised copy detection (SSCD) similarity larger than 0.6 starting from the same iid noise; the probability of an MAE < 15.0 based on [0,255] image comparisons
     \item Measure of model generalizability: 1 - probability of maximum model reproducibility score over the training dataset larger than 0.6. This measures the dissimilarity between the generated sample and all samples from the training dataset.
@@ -666,8 +725,11 @@ COMMENT Philipp: Are FID and IS really that different? The difference between th
 
 \subsection{On Memorization in Diffusion Models}
 \fullcite{gu2025memorizationdiffusionmodels}
+\begin{tldr}
+    Assuming sufficient model capacity, diffusion models optimized by denoising score matching have an optimal solution, which can only produce samples that replicate the training data. This theoretical memorization behavior is empirically contradicted by the good generalization capability of SOTA diffusion models like EDM.
+\end{tldr}
 \begin{itemize}
-    \item Assuming sufficient model capacity, diffusion models optimized by denoising score matching have an optimal solution, which can only produce samples that replicate the training data. This theoretical memorization behavior is empirically contradicted by the good generalization capability of SODA diffusion models like EDM.
+    \item Assuming sufficient model capacity, diffusion models optimized by denoising score matching have an optimal solution, which can only produce samples that replicate the training data. This theoretical memorization behavior is empirically contradicted by the good generalization capability of SOTA diffusion models like EDM.
     \item Memorization definition (\cite{yoon2023diffusion}): a sample is memorized if the $\ell_2$ distance to the nearest neighbor is smaller than 1/3 of the distance to the second-nearest neighbor in the training data (empirical threshold aligned with human memorization)
     \item Most experiments are on CIFAR10 in a highly over-parameterized setting (maximum 5k images vs 56M parameter models), no memorization in unconditional setting with full 50k CIFAR10 -> conclusions are therefore not reliable
     \item Interestingly, an EDM model conditioned on a unique class label for CIFAR10 (50k images) memorizes more of the training data for more training epochs (eventually over 65\%), whereas the unconditional model does not memorize at all
